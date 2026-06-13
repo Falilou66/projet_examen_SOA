@@ -1,0 +1,151 @@
+version: "3.9"
+
+networks:
+  sencity-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+
+services:
+
+  # ── Base de données partagée ───────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sc-postgres
+    environment:
+      POSTGRES_DB:       sencity
+      POSTGRES_USER:     admin
+      POSTGRES_PASSWORD: sencity2026
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - sencity-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d sencity"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Service Surveillance (port 8001) ───────────────────────
+  surveillance:
+    build: ./services/surveillance
+    container_name: sc-surveillance
+    environment:
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     sencity
+      DB_USER:     svc_surveillance
+      DB_PASSWORD: surv_pass
+      DB_SCHEMA:   surveillance
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - sencity-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Service Incidents (port 8002) ──────────────────────────
+  incidents:
+    build: ./services/incidents
+    container_name: sc-incidents
+    environment:
+      DB_HOST:          postgres
+      DB_PORT:          5432
+      DB_NAME:          sencity
+      DB_USER:          svc_incidents
+      DB_PASSWORD:      inc_pass
+      DB_SCHEMA:        incidents
+      SURVEILLANCE_URL: http://surveillance:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      surveillance:
+        condition: service_healthy
+    networks:
+      - sencity-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8002/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── Service Reporting (port 8003) ──────────────────────────
+  reporting:
+    build: ./services/reporting
+    container_name: sc-reporting
+    environment:
+      DB_HOST:          postgres
+      DB_PORT:          5432
+      DB_NAME:          sencity
+      DB_USER:          svc_reporting
+      DB_PASSWORD:      rep_pass
+      DB_SCHEMA:        reporting
+      SURVEILLANCE_URL: http://surveillance:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      surveillance:
+        condition: service_healthy
+    networks:
+      - sencity-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8003/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ── API Gateway (Nginx — port 8080) ────────────────────────
+  gateway:
+    image: nginx:alpine
+    container_name: sc-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      surveillance:
+        condition: service_healthy
+      incidents:
+        condition: service_healthy
+      reporting:
+        condition: service_healthy
+    networks:
+      - sencity-net
+    restart: unless-stopped
+
+  # ── Simulateur IoT ─────────────────────────────────────────
+  simulateur:
+    build: ./simulateur
+    container_name: sc-simulateur
+    environment:
+      GATEWAY_URL:      http://gateway:80
+      INTERVAL_SECONDS: 5
+    depends_on:
+      - gateway
+    networks:
+      - sencity-net
+    restart: unless-stopped
+
+  # ── Dashboard React (port 3000) ────────────────────────────
+  dashboard:
+    build: ./dashboard
+    container_name: sc-dashboard
+    ports:
+      - "3000:80"
+    networks:
+      - sencity-net
+    restart: unless-stopped

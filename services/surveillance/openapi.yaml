@@ -1,0 +1,142 @@
+openapi: "3.0.0"
+info:
+  title: Service Surveillance — SenCity
+  version: "1.0.0"
+  description: |
+    Collecte et exposition des mesures environnementales urbaines de Dakar.
+    Fournisseur de données consommé par les services Incidents et Reporting.
+servers:
+  - url: http://localhost:8080/api/surveillance
+    description: Via la Gateway (production)
+  - url: http://localhost:8001
+    description: Accès direct (développement)
+
+paths:
+  /health:
+    get:
+      summary: Vérifier la disponibilité du service
+      tags: [Santé]
+      responses:
+        "200":
+          description: Service disponible
+          content:
+            application/json:
+              example:
+                success: true
+                data:
+                  status: disponible
+                  service: surveillance
+                  timestamp: "2026-01-15T14:32:00Z"
+
+  /mesures:
+    post:
+      summary: Ingérer une mesure capteur
+      tags: [Mesures]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MesureInput"
+            example:
+              capteur_id: CAP-PLATEAU-001
+              quartier: Plateau
+              type: temperature
+              valeur: 39.2
+              unite: "°C"
+      responses:
+        "201":
+          description: Mesure enregistrée
+        "422":
+          description: Champ requis manquant
+
+    get:
+      summary: Lister les mesures avec filtres
+      tags: [Mesures]
+      parameters:
+        - in: query
+          name: quartier
+          schema: { type: string }
+          example: Plateau
+        - in: query
+          name: type
+          schema: { type: string, enum: [temperature, humidite, aqi, bruit, eau] }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 100, maximum: 1000 }
+        - in: query
+          name: depuis
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: Liste des mesures
+
+  /mesures/dernieres:
+    get:
+      summary: Dernières mesures par capteur (pour composition de services)
+      tags: [Mesures]
+      responses:
+        "200":
+          description: Une mesure par capteur+type
+
+  /mesures/{id}:
+    get:
+      summary: Détail d'une mesure
+      tags: [Mesures]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Mesure trouvée
+        "404":
+          description: Mesure non trouvée
+
+  /capteurs:
+    get:
+      summary: Catalogue de tous les capteurs enregistrés
+      tags: [Capteurs]
+      responses:
+        "200":
+          description: Liste des capteurs
+
+  /capteurs/{id}:
+    get:
+      summary: Statut et dernières mesures d'un capteur
+      tags: [Capteurs]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+          example: CAP-PLATEAU-001
+      responses:
+        "200":
+          description: Capteur avec ses dernières mesures
+        "404":
+          description: Capteur non trouvé
+
+components:
+  schemas:
+    MesureInput:
+      type: object
+      required: [capteur_id, quartier, type, valeur, unite]
+      properties:
+        capteur_id:
+          type: string
+          example: CAP-PLATEAU-001
+        quartier:
+          type: string
+          example: Plateau
+        type:
+          type: string
+          enum: [temperature, humidite, aqi, bruit, eau]
+        valeur:
+          type: number
+          format: float
+          example: 39.2
+        unite:
+          type: string
+          example: "°C"
