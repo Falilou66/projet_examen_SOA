@@ -1,7 +1,7 @@
 version: "3.9"
 
 networks:
-  sencity-net:
+  smartparking-net:
     driver: bridge
 
 volumes:
@@ -23,29 +23,29 @@ services:
     ports:
       - "5432:5432"
     networks:
-      - sencity-net
+      - smartparking-net
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d sencity"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # ── Service Surveillance (port 8001) ───────────────────────
-  surveillance:
-    build: ./services/surveillance
-    container_name: sc-surveillance
+  # ── Service Places (port 8001) ─────────────────────────────
+  places:
+    build: ./services/places
+    container_name: sc-places
     environment:
       DB_HOST:     postgres
       DB_PORT:     5432
       DB_NAME:     sencity
-      DB_USER:     svc_surveillance
-      DB_PASSWORD: surv_pass
-      DB_SCHEMA:   surveillance
+      DB_USER:     svc_places
+      DB_PASSWORD: places_pass
+      DB_SCHEMA:   places
     depends_on:
       postgres:
         condition: service_healthy
     networks:
-      - sencity-net
+      - smartparking-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8001/health"]
@@ -54,25 +54,25 @@ services:
       retries: 5
       start_period: 15s
 
-  # ── Service Incidents (port 8002) ──────────────────────────
-  incidents:
-    build: ./services/incidents
-    container_name: sc-incidents
+  # ── Service Transactions (port 8002) ───────────────────────
+  transactions:
+    build: ./services/transactions
+    container_name: sc-transactions
     environment:
-      DB_HOST:          postgres
-      DB_PORT:          5432
-      DB_NAME:          sencity
-      DB_USER:          svc_incidents
-      DB_PASSWORD:      inc_pass
-      DB_SCHEMA:        incidents
-      SURVEILLANCE_URL: http://surveillance:8001
+      DB_HOST:     postgres
+      DB_PORT:     5432
+      DB_NAME:     sencity
+      DB_USER:     svc_transactions
+      DB_PASSWORD: trans_pass
+      DB_SCHEMA:   transactions
+      PLACES_URL:  http://places:8001
     depends_on:
       postgres:
         condition: service_healthy
-      surveillance:
+      places:
         condition: service_healthy
     networks:
-      - sencity-net
+      - smartparking-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8002/health"]
@@ -92,14 +92,17 @@ services:
       DB_USER:          svc_reporting
       DB_PASSWORD:      rep_pass
       DB_SCHEMA:        reporting
-      SURVEILLANCE_URL: http://surveillance:8001
+      PLACES_URL:       http://places:8001
+      TRANSACTIONS_URL: http://transactions:8002
     depends_on:
       postgres:
         condition: service_healthy
-      surveillance:
+      places:
+        condition: service_healthy
+      transactions:
         condition: service_healthy
     networks:
-      - sencity-net
+      - smartparking-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8003/health"]
@@ -117,17 +120,17 @@ services:
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      surveillance:
+      places:
         condition: service_healthy
-      incidents:
+      transactions:
         condition: service_healthy
       reporting:
         condition: service_healthy
     networks:
-      - sencity-net
+      - smartparking-net
     restart: unless-stopped
 
-  # ── Simulateur IoT ─────────────────────────────────────────
+  # ── Simulateur Parking ─────────────────────────────────────
   simulateur:
     build: ./simulateur
     container_name: sc-simulateur
@@ -137,7 +140,7 @@ services:
     depends_on:
       - gateway
     networks:
-      - sencity-net
+      - smartparking-net
     restart: unless-stopped
 
   # ── Dashboard React (port 3000) ────────────────────────────
@@ -147,5 +150,5 @@ services:
     ports:
       - "3000:80"
     networks:
-      - sencity-net
+      - smartparking-net
     restart: unless-stopped

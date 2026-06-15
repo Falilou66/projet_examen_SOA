@@ -5,31 +5,37 @@ async function req(url, options = {}) {
   return res.json()
 }
 
-export const surveillance = {
-  getMesures: (params = {}) => {
+export const places = {
+  getStats:       () => req('/places/stats'),
+  getZones:       () => req('/places/zones'),
+  getAll:         (params = {}) => {
     const qs = new URLSearchParams(params).toString()
-    return req(`/surveillance/mesures${qs ? `?${qs}` : ''}`)
+    return req(`/places/places${qs ? `?${qs}` : ''}`)
   },
-  getDernieres: () => req('/surveillance/mesures/dernieres'),
-  getCapteurs:  () => req('/surveillance/capteurs'),
+  getDisponibles: (zone = null) => {
+    const qs = zone ? `?zone=${zone}` : ''
+    return req(`/places/places/disponibles${qs}`)
+  },
 }
 
-export const incidents = {
+export const transactions = {
+  entree: (data)  => req('/transactions/entree',  { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  sortie: (data)  => req('/transactions/sortie',  { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }),
+  getEncours: ()  => req('/transactions/encours'),
   getAll: (params = {}) => {
     const qs = new URLSearchParams(params).toString()
-    return req(`/incidents/incidents${qs ? `?${qs}` : ''}`)
+    return req(`/transactions/transactions${qs ? `?${qs}` : ''}`)
   },
-  resoudre: (id) => req(`/incidents/incidents/${id}/resoudre`, { method: 'PUT' }),
-  verifier: ()   => req('/incidents/verifier', { method: 'POST' }),
+  getAlertes: (statut = 'active') => req(`/transactions/alertes?statut=${statut}`),
+  resoudreAlerte: (id) => req(`/transactions/alertes/${id}/resoudre`, { method: 'PUT' }),
+  getTarifs:  ()  => req('/transactions/tarifs'),
 }
 
 export const reporting = {
-  getStats:    (params = {}) => {
-    const qs = new URLSearchParams(params).toString()
-    return req(`/reporting/rapport/statistiques${qs ? `?${qs}` : ''}`)
-  },
-  getTempsReel: () => req('/reporting/rapport/temps-reel'),
-  getTendances: () => req('/reporting/rapport/tendances'),
+  occupation:   () => req('/reporting/rapport/occupation'),
+  revenus: (periode = 'aujourd_hui') => req(`/reporting/rapport/revenus?periode=${periode}`),
+  statistiques: (periode = 'aujourd_hui') => req(`/reporting/rapport/statistiques?periode=${periode}`),
+  tendances:    () => req('/reporting/rapport/tendances'),
 }
 
 export const registry = {

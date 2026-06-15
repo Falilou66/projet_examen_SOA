@@ -2,9 +2,15 @@ import { useState, useEffect } from 'react'
 import { registry } from '../services/api.js'
 
 const ICONES = {
-  surveillance: '📡',
-  incidents:    '🚨',
+  places:       '🅿',
+  transactions: '🚗',
   reporting:    '📊',
+}
+
+const DEP_COLORS = {
+  places:       'bg-blue-100 text-blue-700',
+  transactions: 'bg-violet-100 text-violet-700',
+  reporting:    'bg-amber-100 text-amber-700',
 }
 
 export default function RegistreServices() {
@@ -33,99 +39,110 @@ export default function RegistreServices() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2>Registre des Services SOA</h2>
-        <span style={{ fontSize: '0.8rem', color: '#999' }}>
-          Mis à jour : {ts ?? '…'}
-        </span>
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg font-bold text-slate-900">Registre des Services SOA</h2>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400">Mis à jour : {ts ?? '…'}</span>
+          <button
+            onClick={load}
+            className="text-xs bg-slate-100 hover:bg-slate-200 text-slate-600
+              px-3 py-1.5 rounded-lg border-0 transition-colors"
+          >
+            ↻ Rafraîchir
+          </button>
+        </div>
       </div>
 
       {error && (
-        <div style={{ background: '#fff5f5', border: '1px solid #dc3545', borderRadius: '8px', padding: '1rem', color: '#dc3545' }}>
-          {error}
+        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-rose-600 text-sm mb-4">
+          ⚠ {error}
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         {services.map(s => (
-          <div key={s.id} style={{
-            border: '1px solid #e0e0e0',
-            borderRadius: '10px',
-            padding: '1.2rem',
-            background: '#fafafa',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.8rem' }}>
-              <span style={{ fontSize: '1.5rem' }}>{ICONES[s.id] ?? '⚙️'}</span>
-              <div>
-                <h3 style={{ margin: 0 }}>{s.nom}</h3>
-                <span style={{ fontSize: '0.75rem', color: '#999' }}>v{s.version}</span>
+          <div
+            key={s.id}
+            className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm
+              hover:shadow-md transition-shadow"
+          >
+            {/* Card header */}
+            <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-4 flex items-center gap-3">
+              <span className="text-2xl bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center">
+                {ICONES[s.id] ?? '⚙'}
+              </span>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-white font-bold text-sm leading-tight">{s.nom}</h3>
+                <span className="text-slate-400 text-xs">v{s.version}</span>
               </div>
-              <span style={{
-                marginLeft: 'auto',
-                padding: '0.2rem 0.6rem',
-                borderRadius: '999px',
-                fontSize: '0.75rem',
-                background: s.statut === 'disponible' ? '#e8f5e9' : '#ffebee',
-                color:      s.statut === 'disponible' ? '#2e7d32' : '#c62828',
-                fontWeight: 600,
-              }}>
-                {s.statut === 'disponible' ? '● Disponible' : '● Indisponible'}
+              <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                s.statut === 'disponible'
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-rose-500/20 text-rose-400'
+              }`}>
+                {s.statut === 'disponible' ? '● ON' : '● OFF'}
               </span>
             </div>
 
-            <p style={{ fontSize: '0.82rem', color: '#555', marginBottom: '0.8rem' }}>
-              {s.description}
-            </p>
+            {/* Corps */}
+            <div className="p-4">
+              <p className="text-slate-500 text-xs mb-3 leading-relaxed">{s.description}</p>
 
-            <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-              <div>
-                <span style={{ color: '#999' }}>Endpoints : </span>
-                <strong>{s.endpoints}</strong>
+              <div className="flex flex-col gap-2 text-xs mb-3">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Endpoints</span>
+                  <span className="font-bold text-slate-700">{s.endpoints}</span>
+                </div>
+                <div className="flex justify-between items-start gap-2">
+                  <span className="text-slate-400 shrink-0">Dépendances</span>
+                  <div className="flex flex-wrap gap-1 justify-end">
+                    {s.dependances?.length > 0
+                      ? s.dependances.map(d => (
+                        <span key={d} className={`px-1.5 py-0.5 rounded font-semibold ${DEP_COLORS[d] ?? 'bg-slate-100 text-slate-600'}`}>
+                          {d}
+                        </span>
+                      ))
+                      : <span className="text-slate-400">Aucune</span>
+                    }
+                  </div>
+                </div>
               </div>
-              <div>
-                <span style={{ color: '#999' }}>Dépendances : </span>
-                {s.dependances?.length > 0
-                  ? s.dependances.map(d => (
-                    <span key={d} style={{
-                      background: '#e3f2fd', color: '#1565c0',
-                      padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.75rem', marginLeft: '0.2rem'
-                    }}>
-                      {d}
-                    </span>
-                  ))
-                  : <span style={{ color: '#999' }}>Aucune</span>
-                }
-              </div>
-            </div>
 
-            <div style={{ marginTop: '0.8rem', display: 'flex', gap: '0.5rem' }}>
-              <a
-                href={s.contrat}
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize: '0.78rem', color: '#1a1a2e', textDecoration: 'underline' }}
-              >
-                Contrat OpenAPI →
-              </a>
-              <a
-                href={s.health}
-                target="_blank"
-                rel="noreferrer"
-                style={{ fontSize: '0.78rem', color: '#28a745', textDecoration: 'underline' }}
-              >
-                Health check →
-              </a>
+              <div className="flex gap-2 pt-2 border-t border-slate-100">
+                <a
+                  href={s.contrat}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 text-center text-xs text-indigo-600 hover:text-indigo-800
+                    font-semibold py-1.5 bg-indigo-50 hover:bg-indigo-100 rounded-lg
+                    transition-colors no-underline"
+                >
+                  OpenAPI →
+                </a>
+                <a
+                  href={s.health}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex-1 text-center text-xs text-emerald-600 hover:text-emerald-800
+                    font-semibold py-1.5 bg-emerald-50 hover:bg-emerald-100 rounded-lg
+                    transition-colors no-underline"
+                >
+                  Health ●
+                </a>
+              </div>
             </div>
           </div>
         ))}
       </div>
 
+      {/* JSON brut */}
       {data?.registry && (
-        <div style={{ marginTop: '1.5rem', background: '#f5f5f5', borderRadius: '8px', padding: '1rem' }}>
-          <h3 style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-            Registre brut — <code>GET /api/registry</code>
-          </h3>
-          <pre style={{ fontSize: '0.75rem', overflow: 'auto', maxHeight: 200, color: '#333' }}>
+        <div className="bg-slate-900 rounded-xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-slate-400 text-xs font-mono">GET /api/registry</span>
+            <span className="text-emerald-400 text-xs">● live</span>
+          </div>
+          <pre className="text-emerald-300 text-xs overflow-auto max-h-48 leading-relaxed">
             {JSON.stringify(data.registry, null, 2)}
           </pre>
         </div>

@@ -1,7 +1,7 @@
 # SenCity — Plateforme de Surveillance Environnementale Urbaine
 
-> Projet d'examen — Architecture Orientée Services (AOS/SOA)
-> Université Alioune Diop de Bambey · UFR SATIC · Master 1 SI/SR
+> Projet d'examen — Architecture Orientée Services (SOA)
+> Université Alioune Diop de Bambey · UFR SATIC · Master 1 SI/SR · 2026
 
 ---
 
@@ -13,10 +13,10 @@
 4. [Les 7 principes SOA appliqués](#4-les-7-principes-soa-appliqués)
 5. [Structure du projet](#5-structure-du-projet)
 6. [Services et contrats](#6-services-et-contrats)
-7. [Base de données partagée PostgreSQL](#7-base-de-données-partagée-postgresql)
+7. [Base de données PostgreSQL](#7-base-de-données-postgresql)
 8. [Composition de services](#8-composition-de-services)
 9. [Registre de services](#9-registre-de-services)
-10. [Clients consommateurs](#10-clients-consommateurs)
+10. [Dashboard web temps réel](#10-dashboard-web-temps-réel)
 11. [Conteneurisation Docker](#11-conteneurisation-docker)
 12. [Installation et démarrage](#12-installation-et-démarrage)
 13. [Guide de démonstration](#13-guide-de-démonstration)
@@ -28,7 +28,7 @@
 
 Les grandes villes africaines comme **Dakar** font face à des défis environnementaux croissants :
 
-- **Pollution de l'air** — particules fines PM2.5, émissions de CO₂ en hausse
+- **Pollution de l'air** — particules fines, émissions en hausse dans les zones urbaines denses
 - **Inondations** — bassins de rétention saturés lors des saisons des pluies
 - **Canicules urbaines** — températures extrêmes dans les quartiers densément peuplés
 - **Nuisances sonores** — axes routiers et zones industrielles sans monitoring
@@ -41,9 +41,9 @@ Ces problèmes existent sans infrastructure centralisée permettant aux gestionn
 
 **SenCity** est une plateforme IoT de surveillance environnementale urbaine construite selon les principes de l'**Architecture Orientée Services (SOA)**.
 
-Des capteurs déployés dans les quartiers de Dakar (Plateau, Médina, Parcelles Assainies, Almadies, Grand Dakar) mesurent en continu :
+Des capteurs déployés dans 5 quartiers de Dakar mesurent en continu :
 
-| Indicateur | Unité | Seuil Warning | Seuil Critique |
+| Indicateur | Unité | Seuil Alerte | Seuil Critique |
 |---|---|---|---|
 | Température | °C | > 38 | > 42 |
 | Humidité | % | > 85 | > 95 |
@@ -51,76 +51,79 @@ Des capteurs déployés dans les quartiers de Dakar (Plateau, Médina, Parcelles
 | Niveau sonore | dB | > 70 | > 85 |
 | Niveau d'eau | cm | > 50 | > 80 |
 
-Les données remontent vers la plateforme, sont analysées automatiquement, et déclenchent des **notifications push** sur l'application mobile Flutter des gestionnaires dès qu'un seuil critique est franchi.
+Les données remontent vers la plateforme, sont analysées automatiquement, et des alertes visuelles sont déclenchées sur le dashboard dès qu'un seuil est franchi.
 
 ---
 
 ## 3. Architecture SOA
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         CLIENTS CONSOMMATEURS                       │
-│                                                                     │
-│   ┌──────────────────┐              ┌──────────────────┐           │
-│   │  Dashboard React  │              │   App Flutter    │           │
-│   │  Vite + Chart.js  │              │  Notifications   │           │
-│   │  port 3000        │              │  (natif)         │           │
-│   └────────┬─────────┘              └────────┬─────────┘           │
-│            │ HTTP/REST                        │ HTTP/REST            │
-└────────────┼─────────────────────────────────┼─────────────────────┘
-             │                                  │
-             ▼                                  ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                    BUS DE SERVICES — API GATEWAY                    │
-│                        Nginx · port 8080                            │
-│                                                                     │
-│   /api/registry        →  Registre SOA des services                │
-│   /api/surveillance/*  →  Service Surveillance                      │
-│   /api/incidents/*     →  Service Incidents                         │
-│   /api/reporting/*     →  Service Reporting                         │
-└──────┬────────────────────────┬──────────────────────┬─────────────┘
-       │                        │                       │
-       ▼                        ▼                       ▼
-┌──────────────┐    ┌───────────────────┐   ┌─────────────────────┐
-│   Service    │◄───│  Service          │   │  Service            │
-│ Surveillance │    │  Incidents        │   │  Reporting          │
-│              │◄───│                   │   │                     │
-│ PHP 8.3      │    │  PHP 8.3          │   │  PHP 8.3            │
-│ port :8001   │    │  port :8002       │   │  port :8003         │
-└──────────────┘    └───────────────────┘   └─────────────────────┘
-       │                    │                        │
-       └────────────────────┴────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                   BASE DE DONNÉES PARTAGÉE                          │
-│                   PostgreSQL · port 5432                            │
-│                                                                     │
-│   schéma : surveillance  │  schéma : incidents  │  schéma: reporting│
-└─────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                      CLIENTS CONSOMMATEURS                       │
+│                                                                  │
+│        ┌─────────────────────────┐                               │
+│        │   Dashboard React       │                               │
+│        │   Vite + Leaflet        │                               │
+│        │   Chart.js · port 3000  │                               │
+│        └────────────┬────────────┘                               │
+│                     │ HTTP/REST                                   │
+└─────────────────────┼────────────────────────────────────────────┘
+                      │
+                      ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                BUS DE SERVICES — API GATEWAY                     │
+│                     Nginx · port 8080                            │
+│                                                                  │
+│  /api/registry        →  Registre SOA des services              │
+│  /api/surveillance/*  →  Service Surveillance                    │
+│  /api/incidents/*     →  Service Incidents                       │
+│  /api/reporting/*     →  Service Reporting                       │
+└──────┬───────────────────────┬──────────────────────┬───────────┘
+       │                       │                      │
+       ▼                       ▼                      ▼
+┌─────────────┐    ┌────────────────────┐   ┌────────────────────┐
+│  Service    │◄───│  Service           │   │  Service           │
+│ Surveillance│    │  Incidents         │   │  Reporting         │
+│             │◄───│                    │   │                    │
+│ FastAPI     │    │  FastAPI           │   │  FastAPI           │
+│ port :8001  │    │  port :8002        │   │  port :8003        │
+└─────────────┘    └────────────────────┘   └────────────────────┘
+       │                   │                        │
+       └───────────────────┴────────────────────────┘
+                           │
+                           ▼
+┌──────────────────────────────────────────────────────────────────┐
+│                  BASE DE DONNÉES PARTAGÉE                        │
+│                  PostgreSQL 16 · port 5432                       │
+│                                                                  │
+│  schéma : surveillance │ schéma : incidents │ schéma : reporting │
+└──────────────────────────────────────────────────────────────────┘
+                           ▲
+                           │ POST /mesures toutes les 5s
+                    ┌──────────────┐
+                    │  Simulateur  │
+                    │  IoT (PHP)   │
+                    └──────────────┘
 ```
 
-### Composition de services (SOA)
+### Composition de services
 
 ```
-App Flutter / Dashboard
+POST /api/incidents/verifier
         │
         ▼
-   API Gateway
+Service Incidents appelle :
+GET http://surveillance:8001/mesures/dernieres
         │
         ▼
-  Service Incidents ──── GET /mesures/dernieres ────► Service Surveillance
-        │                                                      │
-        │  applique les règles métier                  retourne mesures
-        │  sur les données reçues                      des capteurs
-        ▼
-  détecte dépassement de seuil
+Reçoit les mesures des capteurs
         │
         ▼
-  crée incident dans incidents.db
+Applique les règles (seuils) de incidents.regles
         │
-        ▼
-  notifie App Flutter (polling)
+        ├── Seuil OK → aucune action
+        └── Seuil dépassé → crée incident en DB
+                           → alerte visuelle sur dashboard
 ```
 
 ---
@@ -128,106 +131,80 @@ App Flutter / Dashboard
 ## 4. Les 7 principes SOA appliqués
 
 ### 1. Contrat standardisé
-Chaque service publie un contrat **OpenAPI 3.0** accessible sur `/api-docs`. Ce contrat définit formellement les endpoints, les types de données attendus, les codes de retour et les exemples. Aucune communication n'est possible sans passer par ce contrat.
+Chaque service publie un contrat **OpenAPI 3.0** accessible via `/api-docs` (redirige vers Swagger UI). Ce contrat définit formellement les endpoints, les types de données, les codes de retour. Aucune communication n'est possible sans passer par ce contrat.
 
 ### 2. Couplage faible
-Les services Incidents et Reporting ne connaissent du service Surveillance que son **URL et son contrat**. Ils ne partagent aucun code, aucune classe, aucune logique interne. Si l'implémentation du service Surveillance change (autre langage, autre logique), les autres services ne sont pas affectés tant que le contrat reste identique.
+Les services Incidents et Reporting ne connaissent du service Surveillance que son **URL et son contrat HTTP**. Ils ne partagent aucun code, aucune librairie, aucune logique interne. Si l'implémentation change, les autres services ne sont pas affectés tant que le contrat est respecté.
 
 ### 3. Abstraction
-Les clients (React, Flutter, simulateur) ne connaissent que l'adresse de la Gateway : `http://localhost:8080`. Ils ignorent combien de services existent, comment ils sont implémentés, et sur quels ports ils tournent. La Gateway est l'unique point d'entrée — c'est l'ESB (Enterprise Service Bus) simplifié.
+Les clients ne connaissent que l'adresse de la Gateway : `http://localhost:8080`. Ils ignorent combien de services existent, sur quels ports ils tournent, avec quel langage ils sont codés. La Gateway est l'unique point d'entrée — c'est l'ESB simplifié.
 
 ### 4. Réutilisabilité
-Le Service de Surveillance est consommé par **trois consommateurs différents** sans aucune modification : le Service Incidents (composition), le Service Reporting (composition), et directement par le Dashboard React et l'App Flutter via la Gateway. Un même service, plusieurs consommateurs.
+Le Service Surveillance est consommé par **trois consommateurs différents** sans modification : le Service Incidents (composition), le Service Reporting (composition), et directement par le Dashboard React via la Gateway. Un même service, plusieurs consommateurs.
 
 ### 5. Autonomie
-Chaque service PHP tourne dans son **propre conteneur Docker** avec son propre processus et ses propres variables d'environnement. Il peut être redémarré, mis à jour ou remplacé indépendamment sans affecter les autres. Le couplage au niveau déploiement est nul.
+Chaque service tourne dans son **propre conteneur Docker** avec ses propres variables d'environnement et son propre processus uvicorn. Il peut être redémarré ou mis à jour indépendamment sans affecter les autres.
 
 ### 6. Sans état (Stateless)
-Chaque requête HTTP est **complète et autonome**. Aucun état de session n'est maintenu côté serveur. Toutes les informations nécessaires au traitement sont contenues dans la requête elle-même (paramètres, corps JSON). Cela permet la scalabilité horizontale.
+Chaque requête HTTP est **complète et autonome**. Aucun état de session n'est maintenu côté serveur. Toutes les informations nécessaires sont contenues dans la requête elle-même. Cela permet la scalabilité horizontale (4 workers uvicorn par service).
 
 ### 7. Découvrabilité
-La Gateway expose un endpoint **`/api/registry`** — le registre SOA. Il liste en temps réel les services disponibles, leurs URLs de contrat OpenAPI, leurs dépendances et leur statut de santé. Un consommateur peut interroger ce registre pour découvrir dynamiquement les services disponibles.
+La Gateway expose un endpoint **`/api/registry`** — le registre SOA. Il liste en temps réel les services disponibles, leurs URLs de contrat OpenAPI, leurs dépendances et leur statut. Un consommateur peut interroger ce registre pour découvrir dynamiquement les services.
 
 ---
 
 ## 5. Structure du projet
 
 ```
-sencity/
+projet_examen_SOA/
 │
-├── docker-compose.yml              # Orchestration complète
+├── docker-compose.yml              # Orchestration complète (7 conteneurs)
 ├── README.md
 │
-├── gateway/                        # Bus de services (Nginx)
-│   └── nginx.conf                  # Routing + registre
+├── gateway/
+│   └── nginx.conf                  # Bus de services + registre SOA intégré
+│
+├── database/
+│   └── init.sql                    # Schémas PostgreSQL + utilisateurs + données initiales
 │
 ├── services/
-│   ├── surveillance/               # Service Surveillance
-│   │   ├── Dockerfile
-│   │   ├── index.php               # Front controller
-│   │   ├── router.php
-│   │   ├── openapi.yaml            # Contrat OpenAPI 3.0
-│   │   ├── routes/api.php
-│   │   ├── src/
-│   │   │   ├── Core/               # Request, Response, Router, DB
-│   │   │   └── Controllers/        # MesureController, CapteurController
-│   │   └── database/
-│   │       └── migrations.sql      # Schéma PostgreSQL
+│   ├── surveillance/               # Service Surveillance (FastAPI)
+│   │   ├── Dockerfile              # python:3.12-slim + uvicorn 4 workers
+│   │   ├── main.py                 # Endpoints FastAPI
+│   │   ├── requirements.txt
+│   │   └── openapi.yaml            # Contrat OpenAPI 3.0 (référence)
 │   │
-│   ├── incidents/                  # Service Incidents
+│   ├── incidents/                  # Service Incidents (FastAPI)
 │   │   ├── Dockerfile
-│   │   ├── index.php
-│   │   ├── router.php
-│   │   ├── openapi.yaml
-│   │   ├── routes/api.php
-│   │   ├── src/
-│   │   │   ├── Core/
-│   │   │   └── Controllers/        # IncidentController, AbonnementController
-│   │   └── database/
-│   │       └── migrations.sql
+│   │   ├── main.py
+│   │   ├── requirements.txt
+│   │   └── openapi.yaml
 │   │
-│   └── reporting/                  # Service Reporting
+│   └── reporting/                  # Service Reporting (FastAPI)
 │       ├── Dockerfile
-│       ├── index.php
-│       ├── router.php
-│       ├── openapi.yaml
-│       ├── routes/api.php
-│       ├── src/
-│       │   ├── Core/
-│       │   └── Controllers/        # RapportController, StatistiqueController
-│       └── database/
-│           └── migrations.sql
+│       ├── main.py
+│       ├── requirements.txt
+│       └── openapi.yaml
 │
-├── simulateur/                     # Injecteur de données IoT
+├── simulateur/                     # Injecteur de données IoT (PHP CLI)
 │   ├── Dockerfile
-│   └── simulate.php                # Envoie POST toutes les 5s
+│   └── simulate.php                # Envoie POST /mesures toutes les 5s
 │
-├── dashboard/                      # Client React (Vite)
-│   ├── Dockerfile
-│   ├── package.json
-│   ├── vite.config.js
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── components/
-│       │   ├── MapQuartiers.jsx     # Carte Leaflet
-│       │   ├── GraphiqueTemps.jsx   # Chart.js temps réel
-│       │   ├── ListeIncidents.jsx
-│       │   └── RegistreServices.jsx # Affiche /api/registry
-│       └── services/
-│           └── api.js              # Appels REST centralisés
-│
-└── mobile/                         # Client Flutter
-    ├── pubspec.yaml
-    └── lib/
-        ├── main.dart
-        ├── services/
-        │   └── api_service.dart    # Polling + appels REST
-        ├── screens/
-        │   ├── dashboard_screen.dart
-        │   └── incidents_screen.dart
-        └── utils/
-            └── notification_service.dart  # flutter_local_notifications
+└── dashboard/                      # Client web React (Vite)
+    ├── Dockerfile                  # Multi-stage build → nginx
+    ├── package.json
+    ├── vite.config.js
+    └── src/
+        ├── App.jsx                 # Layout + polling 5s + toasts d'alerte
+        ├── App.css
+        ├── components/
+        │   ├── KpiCards.jsx        # 5 indicateurs en temps réel (vert/orange/rouge)
+        │   ├── MapQuartiers.jsx    # Carte Leaflet + marqueurs pulsants
+        │   ├── GraphiqueTemps.jsx  # Courbes Chart.js par type de capteur
+        │   ├── ListeIncidents.jsx  # Incidents actifs + résolution
+        │   └── RegistreServices.jsx
+        └── services/
+            └── api.js              # Appels REST centralisés vers la Gateway
 ```
 
 ---
@@ -236,18 +213,18 @@ sencity/
 
 ### Service Surveillance — `http://localhost:8080/api/surveillance`
 
-**Responsabilité** : Ingestion et consultation des mesures environnementales. C'est le service **fournisseur de données** — il est consommé par tous les autres.
+**Responsabilité** : Ingestion et consultation des mesures environnementales. C'est le service **fournisseur de données** consommé par tous les autres.
 
 | Méthode | Endpoint | Description |
 |---|---|---|
-| `POST` | `/mesures` | Ingérer une mesure (capteur → service) |
-| `GET` | `/mesures` | Lister les mesures (`?quartier=&type=&limit=&depuis=`) |
-| `GET` | `/mesures/{id}` | Détail d'une mesure |
-| `GET` | `/mesures/dernieres` | Dernières mesures par capteur (pour composition) |
-| `GET` | `/capteurs` | Catalogue des capteurs enregistrés |
-| `GET` | `/capteurs/{id}` | Statut d'un capteur |
 | `GET` | `/health` | Disponibilité du service |
-| `GET` | `/api-docs` | Contrat OpenAPI 3.0 |
+| `POST` | `/mesures` | Ingérer une mesure capteur |
+| `GET` | `/mesures` | Lister les mesures (`?quartier=&type=&depuis=&limit=`) |
+| `GET` | `/mesures/dernieres` | Dernière mesure par capteur et par type |
+| `GET` | `/mesures/{id}` | Détail d'une mesure |
+| `GET` | `/capteurs` | Catalogue des capteurs enregistrés |
+| `GET` | `/capteurs/{id}` | Statut et dernières mesures d'un capteur |
+| `GET` | `/api-docs` | Swagger UI (contrat OpenAPI) |
 
 **Exemple de mesure ingérée :**
 ```json
@@ -260,7 +237,7 @@ sencity/
 }
 ```
 
-**Exemple de réponse :**
+**Format de réponse standard :**
 ```json
 {
   "success": true,
@@ -271,7 +248,7 @@ sencity/
     "type": "temperature",
     "valeur": 39.2,
     "unite": "°C",
-    "timestamp": "2026-01-15T14:32:00Z"
+    "timestamp": "2026-06-15T14:32:00+00:00"
   }
 }
 ```
@@ -280,20 +257,20 @@ sencity/
 
 ### Service Incidents — `http://localhost:8080/api/incidents`
 
-**Responsabilité** : Surveillance des seuils, génération d'incidents, gestion des abonnements de notification. Ce service **compose** le Service Surveillance — il l'appelle en interne pour obtenir les dernières mesures.
+**Responsabilité** : Surveillance des seuils, génération d'incidents, gestion des abonnements. Ce service **compose** le Service Surveillance — il l'appelle en interne via HTTP pour obtenir les dernières mesures.
 
 | Méthode | Endpoint | Description |
 |---|---|---|
+| `GET` | `/health` | Disponibilité du service |
 | `GET` | `/incidents` | Liste des incidents (`?statut=actif&quartier=&severite=`) |
 | `GET` | `/incidents/{id}` | Détail d'un incident |
 | `PUT` | `/incidents/{id}/resoudre` | Marquer un incident comme résolu |
 | `GET` | `/regles` | Consulter les seuils de détection |
-| `PUT` | `/regles/{type}` | Modifier un seuil |
-| `POST` | `/abonnements` | S'abonner aux notifications (token Flutter) |
+| `PUT` | `/regles/{type}` | Modifier un seuil dynamiquement |
+| `POST` | `/abonnements` | S'abonner aux notifications (token push) |
 | `DELETE` | `/abonnements/{token}` | Se désabonner |
-| `POST` | `/verifier` | Déclencher une vérification manuelle des seuils |
-| `GET` | `/health` | Disponibilité du service |
-| `GET` | `/api-docs` | Contrat OpenAPI 3.0 |
+| `POST` | `/verifier` | Vérifier les seuils sur les dernières mesures |
+| `GET` | `/api-docs` | Swagger UI (contrat OpenAPI) |
 
 **Exemple d'incident généré :**
 ```json
@@ -303,11 +280,11 @@ sencity/
   "quartier": "Plateau",
   "type": "temperature",
   "valeur_mesuree": 43.1,
-  "seuil_depasse": 42,
+  "seuil_depasse": 42.0,
   "severite": "critique",
   "statut": "actif",
-  "message": "Température critique détectée au Plateau : 43.1°C",
-  "cree_le": "2026-01-15T14:32:00Z"
+  "message": "Critique temperature détecté(e) à Plateau : 43.1 °C (seuil: 42.0)",
+  "cree_le": "2026-06-15T14:32:00+00:00"
 }
 ```
 
@@ -319,183 +296,137 @@ sencity/
 
 | Méthode | Endpoint | Description |
 |---|---|---|
-| `GET` | `/rapport/temps-reel` | État actuel de tous les quartiers |
-| `GET` | `/rapport/statistiques` | Moyennes, min/max par type et quartier |
-| `GET` | `/rapport/historique` | Évolution sur une période (`?debut=&fin=&quartier=`) |
-| `GET` | `/rapport/tendances` | Comparaison 24h / 7 jours |
-| `GET` | `/rapport/export` | Export CSV (`?periode=7j&quartier=`) |
 | `GET` | `/health` | Disponibilité du service |
-| `GET` | `/api-docs` | Contrat OpenAPI 3.0 |
-
-**Exemple de réponse statistiques :**
-```json
-{
-  "periode": "24h",
-  "quartiers": [
-    {
-      "nom": "Plateau",
-      "temperature": { "moyenne": 37.4, "min": 31.2, "max": 43.1 },
-      "aqi":         { "moyenne": 89,   "min": 45,   "max": 167  },
-      "incidents":   3
-    }
-  ]
-}
-```
+| `GET` | `/rapport/temps-reel` | État actuel de tous les quartiers |
+| `GET` | `/rapport/statistiques` | Moyennes, min/max (`?periode=24h&quartier=`) |
+| `GET` | `/rapport/historique` | Historique sur une période (`?debut=&quartier=&type=`) |
+| `GET` | `/rapport/tendances` | Comparaison 24h vs 24h précédentes |
+| `GET` | `/rapport/export` | Export CSV (`?periode=7j&quartier=`) |
+| `GET` | `/api-docs` | Swagger UI (contrat OpenAPI) |
 
 ---
 
-## 7. Base de données partagée PostgreSQL
+## 7. Base de données PostgreSQL
 
-En SOA, les services partagent **une seule base de données** mais chacun possède son propre **schéma logique**. Un service n'accède jamais aux tables d'un autre service directement — il passe obligatoirement par son contrat de service.
+En SOA, les services partagent **une seule instance de base de données** mais chacun possède son **schéma logique isolé**. Un service n'accède jamais directement aux tables d'un autre — il passe obligatoirement par son contrat HTTP.
 
-### Schémas et tables
+### Schémas et isolation
 
-```sql
--- ── Schéma Surveillance ─────────────────────────────────────────────
-CREATE SCHEMA surveillance;
-
-CREATE TABLE surveillance.capteurs (
-    id          SERIAL PRIMARY KEY,
-    capteur_id  VARCHAR(50) UNIQUE NOT NULL,
-    quartier    VARCHAR(100) NOT NULL,
-    latitude    DECIMAL(9,6),
-    longitude   DECIMAL(9,6),
-    actif       BOOLEAN DEFAULT TRUE,
-    enregistre_le TIMESTAMPTZ DEFAULT NOW()
-);
-
-CREATE TABLE surveillance.mesures (
-    id          SERIAL PRIMARY KEY,
-    capteur_id  VARCHAR(50) NOT NULL,
-    quartier    VARCHAR(100) NOT NULL,
-    type        VARCHAR(50) NOT NULL,  -- temperature, humidite, aqi, bruit, eau
-    valeur      DECIMAL(10,2) NOT NULL,
-    unite       VARCHAR(20),
-    timestamp   TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ── Schéma Incidents ────────────────────────────────────────────────
-CREATE SCHEMA incidents;
-
-CREATE TABLE incidents.incidents (
-    id              SERIAL PRIMARY KEY,
-    capteur_id      VARCHAR(50) NOT NULL,
-    quartier        VARCHAR(100) NOT NULL,
-    type            VARCHAR(50) NOT NULL,
-    valeur_mesuree  DECIMAL(10,2) NOT NULL,
-    seuil_depasse   DECIMAL(10,2) NOT NULL,
-    severite        VARCHAR(20) NOT NULL,  -- warning, critique
-    statut          VARCHAR(20) DEFAULT 'actif',
-    message         TEXT,
-    cree_le         TIMESTAMPTZ DEFAULT NOW(),
-    resolu_le       TIMESTAMPTZ
-);
-
-CREATE TABLE incidents.regles (
-    type            VARCHAR(50) PRIMARY KEY,
-    seuil_warning   DECIMAL(10,2) NOT NULL,
-    seuil_critique  DECIMAL(10,2) NOT NULL,
-    unite           VARCHAR(20)
-);
-
-CREATE TABLE incidents.abonnements (
-    token       VARCHAR(255) PRIMARY KEY,
-    plateforme  VARCHAR(20) DEFAULT 'flutter',
-    cree_le     TIMESTAMPTZ DEFAULT NOW()
-);
-
--- ── Schéma Reporting ────────────────────────────────────────────────
-CREATE SCHEMA reporting;
-
-CREATE TABLE reporting.rapports_cache (
-    id          SERIAL PRIMARY KEY,
-    type        VARCHAR(50) NOT NULL,
-    parametres  JSONB,
-    resultat    JSONB NOT NULL,
-    genere_le   TIMESTAMPTZ DEFAULT NOW(),
-    expire_le   TIMESTAMPTZ
-);
+```
+PostgreSQL (sencity)
+├── schema: surveillance  → svc_surveillance (accès exclusif)
+│   ├── capteurs
+│   └── mesures
+│
+├── schema: incidents     → svc_incidents (accès exclusif)
+│   ├── incidents
+│   ├── regles
+│   └── abonnements
+│
+└── schema: reporting     → svc_reporting (accès exclusif)
+    └── rapports_cache
 ```
 
-### Accès par service (utilisateurs PostgreSQL)
-
-Chaque service se connecte avec un utilisateur PostgreSQL dédié qui n'a accès **qu'à son propre schéma** :
+### Tables principales
 
 ```sql
--- Utilisateur du service surveillance
-CREATE USER svc_surveillance WITH PASSWORD 'surv_pass';
-GRANT ALL ON SCHEMA surveillance TO svc_surveillance;
-GRANT ALL ON ALL TABLES IN SCHEMA surveillance TO svc_surveillance;
+-- Mesures des capteurs IoT
+CREATE TABLE surveillance.mesures (
+    id         SERIAL PRIMARY KEY,
+    capteur_id VARCHAR(50) NOT NULL,
+    quartier   VARCHAR(100) NOT NULL,
+    type       VARCHAR(50) NOT NULL,   -- temperature, humidite, aqi, bruit, eau
+    valeur     DECIMAL(10,2) NOT NULL,
+    unite      VARCHAR(20),
+    timestamp  TIMESTAMPTZ DEFAULT NOW()
+);
 
--- Utilisateur du service incidents
-CREATE USER svc_incidents WITH PASSWORD 'inc_pass';
-GRANT ALL ON SCHEMA incidents TO svc_incidents;
-GRANT ALL ON ALL TABLES IN SCHEMA incidents TO svc_incidents;
+-- Incidents détectés automatiquement
+CREATE TABLE incidents.incidents (
+    id             SERIAL PRIMARY KEY,
+    capteur_id     VARCHAR(50) NOT NULL,
+    quartier       VARCHAR(100) NOT NULL,
+    type           VARCHAR(50) NOT NULL,
+    valeur_mesuree DECIMAL(10,2) NOT NULL,
+    seuil_depasse  DECIMAL(10,2) NOT NULL,
+    severite       VARCHAR(20) NOT NULL,   -- warning, critique
+    statut         VARCHAR(20) DEFAULT 'actif',
+    message        TEXT,
+    cree_le        TIMESTAMPTZ DEFAULT NOW(),
+    resolu_le      TIMESTAMPTZ
+);
 
--- Utilisateur du service reporting
-CREATE USER svc_reporting WITH PASSWORD 'rep_pass';
-GRANT ALL ON SCHEMA reporting TO svc_reporting;
-GRANT ALL ON ALL TABLES IN SCHEMA reporting TO svc_reporting;
+-- Règles de détection (modifiables via API)
+CREATE TABLE incidents.regles (
+    type           VARCHAR(50) PRIMARY KEY,
+    seuil_warning  DECIMAL(10,2) NOT NULL,
+    seuil_critique DECIMAL(10,2) NOT NULL,
+    unite          VARCHAR(20)
+);
 ```
 
 ---
 
 ## 8. Composition de services
 
-La **composition de services** est un principe fondamental de la SOA. Elle signifie qu'un service peut orchestrer d'autres services pour accomplir un processus métier plus complexe.
+La **composition de services** est un principe clé de la SOA : un service orchestre d'autres services via leur contrat HTTP pour accomplir un processus métier complexe.
 
-### Service Incidents → compose → Service Surveillance
-
-Le Service Incidents ne stocke pas les mesures. Pour vérifier si un seuil est dépassé, il interroge le Service Surveillance via son contrat :
+### Incidents compose Surveillance
 
 ```
 POST /api/incidents/verifier
-         │
-         ▼
-Service Incidents appelle :
-GET http://surveillance:8001/mesures/dernieres
-         │
-         ▼
-Reçoit les mesures des 5 dernières minutes
-         │
-         ▼
-Applique les règles (seuils) de la table incidents.regles
-         │
-         ├── Seuil OK → aucune action
-         └── Seuil dépassé → INSERT dans incidents.incidents
-                              → notifie les tokens Flutter abonnés
+        │
+        ▼
+Service Incidents (port 8002)
+        │
+        └─► GET http://surveillance:8001/mesures/dernieres
+                    │
+                    ▼
+            Retourne dernières mesures par capteur
+                    │
+        ◄───────────┘
+        │
+        ▼
+Charge les règles depuis incidents.regles
+        │
+        ├── valeur ≤ seuil_warning   → aucun incident
+        ├── valeur > seuil_warning   → incident "warning"
+        └── valeur > seuil_critique  → incident "critique"
+                    │
+                    ▼
+            INSERT INTO incidents.incidents
 ```
 
-### Service Reporting → compose → Service Surveillance
+### Reporting compose Surveillance
 
 ```
-GET /api/reporting/rapport/statistiques
-         │
-         ▼
-Service Reporting appelle :
-GET http://surveillance:8001/mesures?limit=1000&depuis=24h
-         │
-         ▼
-Calcule les agrégats (moyenne, min, max, tendances)
-         │
-         ▼
-Met en cache dans reporting.rapports_cache
-         │
-         ▼
-Retourne le rapport au client
+GET /api/reporting/rapport/statistiques?periode=24h
+        │
+        ▼
+Service Reporting (port 8003)
+        │
+        └─► GET http://surveillance:8001/mesures?limit=1000&depuis=<timestamp>
+                    │
+                    ▼
+            Calcule moyennes, min, max par quartier et par type
+                    │
+        ◄───────────┘
+        │
+        ▼
+Retourne le rapport agrégé au client
 ```
 
 ---
 
 ## 9. Registre de services
 
-Le registre est accessible sur `http://localhost:8080/api/registry`. Il liste en temps réel les services disponibles, leurs contrats et leurs statuts.
+Le registre est accessible sur `http://localhost:8080/api/registry`. Il est défini statiquement dans la Gateway Nginx et liste les 3 services avec leurs métadonnées SOA.
 
 ```json
 {
   "registry": {
     "version": "1.0.0",
-    "timestamp": "2026-01-15T14:32:00Z",
+    "description": "SenCity — Registre des services SOA",
     "services": [
       {
         "id":          "surveillance",
@@ -503,6 +434,7 @@ Le registre est accessible sur `http://localhost:8080/api/registry`. Il liste en
         "description": "Collecte et exposition des mesures environnementales",
         "url_interne": "http://surveillance:8001",
         "contrat":     "http://localhost:8080/api/surveillance/api-docs",
+        "health":      "http://localhost:8080/api/surveillance/health",
         "statut":      "disponible",
         "version":     "1.0.0",
         "dependances": [],
@@ -511,22 +443,12 @@ Le registre est accessible sur `http://localhost:8080/api/registry`. Il liste en
       {
         "id":          "incidents",
         "nom":         "Service de Gestion des Incidents",
-        "description": "Détection des anomalies, alertes et notifications",
-        "url_interne": "http://incidents:8002",
-        "contrat":     "http://localhost:8080/api/incidents/api-docs",
-        "statut":      "disponible",
-        "version":     "1.0.0",
         "dependances": ["surveillance"],
         "endpoints":   9
       },
       {
         "id":          "reporting",
         "nom":         "Service de Reporting",
-        "description": "Agrégation, statistiques et rapports décisionnels",
-        "url_interne": "http://reporting:8003",
-        "contrat":     "http://localhost:8080/api/reporting/api-docs",
-        "statut":      "disponible",
-        "version":     "1.0.0",
         "dependances": ["surveillance"],
         "endpoints":   6
       }
@@ -537,245 +459,76 @@ Le registre est accessible sur `http://localhost:8080/api/registry`. Il liste en
 
 ---
 
-## 10. Clients consommateurs
+## 10. Dashboard web temps réel
 
-### Dashboard React (Vite)
+Le dashboard React consomme les 3 services via la Gateway et se rafraîchit automatiquement toutes les **5 secondes**.
 
-Le dashboard est une **Single Page Application** React construite avec Vite. Il consomme les 3 services via la Gateway.
+### Fonctionnalités
 
-**Fonctionnalités :**
-- **Carte interactive** (Leaflet) — affiche les 5 quartiers avec indicateurs colorés (vert/orange/rouge selon les seuils)
-- **Graphiques temps réel** (Chart.js) — courbes des mesures des dernières 24h par type
-- **Liste des incidents** — incidents actifs avec severité et possibilité de résolution
-- **Registre des services** — affiche l'état des 3 services en temps réel (`/api/registry`)
-- **Rafraîchissement automatique** toutes les 10 secondes
+**KPI Cards** — 5 indicateurs en temps réel avec code couleur :
+- Vert : valeur normale
+- Orange : seuil d'alerte dépassé
+- Rouge clignotant : seuil critique dépassé
+
+**Carte interactive** (Leaflet) — 5 quartiers de Dakar avec marqueurs colorés :
+- Zones critiques : marqueurs avec anneaux pulsants animés
+- Popup au clic : détail de toutes les mesures du quartier
+
+**Graphiques** (Chart.js) — courbes d'évolution des 60 dernières mesures par type de capteur, par quartier
+
+**Liste des incidents** — incidents actifs avec sévérité, possibilité de résolution manuelle, filtrage par statut
+
+**Toasts de notification** — alerte visuelle automatique en bas à droite dès qu'un nouvel incident est détecté
+
+**Indicateur live** — point vert clignotant dans le header avec l'heure de la dernière synchronisation
+
+**Registre SOA** — état des 3 services en temps réel
 
 **Accès :** `http://localhost:3000`
-
-### Application Flutter
-
-L'application mobile consomme les services REST directement via la Gateway. Elle tourne **hors Docker** (buildée nativement sur la machine de développement).
-
-**Fonctionnalités :**
-- **Écran Dashboard** — métriques clés de chaque quartier
-- **Écran Incidents** — liste des incidents avec détails et statuts
-- **Notifications locales** — déclenchées automatiquement quand un nouvel incident critique apparaît
-- **Polling** — interroge `/api/incidents?statut=actif` toutes les 10 secondes
-
-**Packages Flutter utilisés :**
-```yaml
-dependencies:
-  http: ^1.2.0
-  flutter_local_notifications: ^17.0.0
-  fl_chart: ^0.68.0
-```
-
-**Configuration de l'URL de l'API** dans `lib/services/api_service.dart` :
-```dart
-// Android émulateur
-static const String baseUrl = 'http://10.0.2.2:8080';
-
-// iPhone simulateur ou device réel sur le même réseau
-// static const String baseUrl = 'http://192.168.1.X:8080';
-```
 
 ---
 
 ## 11. Conteneurisation Docker
 
-L'ensemble du backend et du dashboard web tourne dans des **conteneurs Docker** orchestrés par Docker Compose.
+### Conteneurs
 
-### Vue d'ensemble des conteneurs
-
-| Conteneur | Image | Port exposé | Rôle |
+| Conteneur | Image de base | Port exposé | Rôle |
 |---|---|---|---|
 | `sc-postgres` | `postgres:16-alpine` | `5432` | Base de données partagée |
 | `sc-gateway` | `nginx:alpine` | `8080` | Bus de services / ESB |
-| `sc-surveillance` | `php:8.3-cli-alpine` | interne `:8001` | Service Surveillance |
-| `sc-incidents` | `php:8.3-cli-alpine` | interne `:8002` | Service Incidents |
-| `sc-reporting` | `php:8.3-cli-alpine` | interne `:8003` | Service Reporting |
-| `sc-dashboard` | `node:20-alpine` | `3000` | Dashboard React |
-| `sc-simulateur` | `php:8.3-cli-alpine` | — | Injecteur de données |
+| `sc-surveillance` | `python:3.12-slim` | interne `:8001` | Service Surveillance (4 workers) |
+| `sc-incidents` | `python:3.12-slim` | interne `:8002` | Service Incidents (4 workers) |
+| `sc-reporting` | `python:3.12-slim` | interne `:8003` | Service Reporting (4 workers) |
+| `sc-dashboard` | `nginx:alpine` (build node) | `3000` | Dashboard React (statique) |
+| `sc-simulateur` | `php:8.3-cli-alpine` | — | Injecteur IoT (1 mesure/5s) |
 
-### docker-compose.yml (structure)
-
-```yaml
-version: "3.9"
-
-networks:
-  sencity-net:
-    driver: bridge
-
-volumes:
-  postgres-data:
-
-services:
-
-  postgres:
-    image: postgres:16-alpine
-    container_name: sc-postgres
-    environment:
-      POSTGRES_DB:       sencity
-      POSTGRES_USER:     admin
-      POSTGRES_PASSWORD: sencity2026
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
-    ports:
-      - "5432:5432"
-    networks:
-      - sencity-net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d sencity"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  gateway:
-    image: nginx:alpine
-    container_name: sc-gateway
-    ports:
-      - "8080:80"
-    volumes:
-      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      surveillance:
-        condition: service_healthy
-      incidents:
-        condition: service_healthy
-      reporting:
-        condition: service_healthy
-    networks:
-      - sencity-net
-    restart: unless-stopped
-
-  surveillance:
-    build: ./services/surveillance
-    container_name: sc-surveillance
-    environment:
-      DB_HOST:     postgres
-      DB_PORT:     5432
-      DB_NAME:     sencity
-      DB_USER:     svc_surveillance
-      DB_PASSWORD: surv_pass
-      DB_SCHEMA:   surveillance
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - sencity-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "php", "-r", "exit(file_get_contents('http://localhost:8001/health')?0:1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  incidents:
-    build: ./services/incidents
-    container_name: sc-incidents
-    environment:
-      DB_HOST:          postgres
-      DB_PORT:          5432
-      DB_NAME:          sencity
-      DB_USER:          svc_incidents
-      DB_PASSWORD:      inc_pass
-      DB_SCHEMA:        incidents
-      SURVEILLANCE_URL: http://surveillance:8001
-    depends_on:
-      postgres:
-        condition: service_healthy
-      surveillance:
-        condition: service_healthy
-    networks:
-      - sencity-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "php", "-r", "exit(file_get_contents('http://localhost:8002/health')?0:1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  reporting:
-    build: ./services/reporting
-    container_name: sc-reporting
-    environment:
-      DB_HOST:          postgres
-      DB_PORT:          5432
-      DB_NAME:          sencity
-      DB_USER:          svc_reporting
-      DB_PASSWORD:      rep_pass
-      DB_SCHEMA:        reporting
-      SURVEILLANCE_URL: http://surveillance:8001
-    depends_on:
-      postgres:
-        condition: service_healthy
-      surveillance:
-        condition: service_healthy
-    networks:
-      - sencity-net
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "php", "-r", "exit(file_get_contents('http://localhost:8003/health')?0:1);"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-
-  dashboard:
-    build: ./dashboard
-    container_name: sc-dashboard
-    ports:
-      - "3000:80"
-    networks:
-      - sencity-net
-    restart: unless-stopped
-
-  simulateur:
-    build: ./simulateur
-    container_name: sc-simulateur
-    environment:
-      GATEWAY_URL:       http://gateway:80
-      INTERVAL_SECONDS:  5
-    depends_on:
-      - gateway
-    networks:
-      - sencity-net
-    restart: unless-stopped
-```
-
-### Dockerfile PHP (même base pour les 3 services)
+### Dockerfile des services Python (même base)
 
 ```dockerfile
-FROM php:8.3-cli-alpine
+FROM python:3.12-slim
 
-# Extension PostgreSQL
-RUN apk add --no-cache postgresql-dev \
- && docker-php-ext-install pdo pdo_pgsql
+RUN apt-get update && apt-get install -y --no-install-recommends curl libpq-dev gcc \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py .
 
 EXPOSE 8001
-CMD ["php", "-S", "0.0.0.0:8001", "router.php"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "4"]
 ```
 
-### Dockerfile React (dashboard)
+### Ordre de démarrage (depends_on)
 
-```dockerfile
-FROM node:20-alpine AS build
-WORKDIR /app
-COPY package*.json ./
-RUN npm install
-COPY . .
-RUN npm run build
-
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+```
+postgres (healthy)
+    └─► surveillance (healthy)
+            └─► incidents (healthy)
+            └─► reporting (healthy)
+                    └─► gateway
+                            └─► simulateur
 ```
 
 ---
@@ -784,106 +537,101 @@ EXPOSE 80
 
 ### Prérequis
 
-- Docker Desktop (ou Docker Engine + Docker Compose)
-- Flutter SDK (pour l'app mobile uniquement)
+- Docker Engine + Docker Compose v2
 - Git
 
-### Démarrage du backend et dashboard
+### Démarrage
 
 ```bash
 # 1. Cloner le projet
-git clone https://github.com/Falilou66/sencity.git
-cd sencity
+git clone <repo-url>
+cd projet_examen_SOA
 
 # 2. Démarrer tous les conteneurs
-docker-compose up --build
+docker compose up --build -d
 
-# 3. Vérifier que tout tourne
-docker-compose ps
+# 3. Vérifier que tout tourne (attendre ~20s)
+docker compose ps
 ```
 
-Les services sont disponibles après 15-20 secondes (attente que PostgreSQL soit prêt).
+### URLs d'accès
 
 | URL | Description |
 |---|---|
 | `http://localhost:3000` | Dashboard React |
 | `http://localhost:8080/api/registry` | Registre SOA |
-| `http://localhost:8080/api/surveillance/health` | Santé Service Surveillance |
-| `http://localhost:8080/api/incidents/health` | Santé Service Incidents |
-| `http://localhost:8080/api/reporting/health` | Santé Service Reporting |
-| `http://localhost:8080/api/surveillance/api-docs` | Contrat OpenAPI Surveillance |
-| `http://localhost:8080/api/incidents/api-docs` | Contrat OpenAPI Incidents |
-| `http://localhost:8080/api/reporting/api-docs` | Contrat OpenAPI Reporting |
-
-### Démarrage de l'app Flutter
-
-```bash
-# Dans un terminal séparé
-cd mobile
-flutter pub get
-flutter run
-```
-
-> Sur émulateur Android, l'API est accessible via `http://10.0.2.2:8080`.
-> Sur device réel, remplacer par l'IP locale de ta machine.
+| `http://localhost:8080/api/surveillance/health` | Santé surveillance |
+| `http://localhost:8080/api/incidents/health` | Santé incidents |
+| `http://localhost:8080/api/reporting/health` | Santé reporting |
+| `http://localhost:8080/api/surveillance/api-docs` | Swagger UI surveillance |
+| `http://localhost:8080/api/incidents/api-docs` | Swagger UI incidents |
+| `http://localhost:8080/api/reporting/api-docs` | Swagger UI reporting |
 
 ### Commandes utiles
 
 ```bash
-# Voir les logs en temps réel
-docker-compose logs -f
+# Logs d'un service
+docker compose logs -f surveillance
 
-# Logs d'un service spécifique
-docker-compose logs -f surveillance
+# Logs du simulateur (voir les mesures envoyées)
+docker compose logs -f simulateur
 
-# Redémarrer un seul service
-docker-compose restart incidents
+# Redémarrer un service
+docker compose restart incidents
 
-# Arrêter un service (pour tester la résilience)
-docker-compose stop surveillance
+# Arrêter un service (test de résilience)
+docker compose stop surveillance
 
-# Tout arrêter et nettoyer
-docker-compose down -v
+# Tout arrêter (conserve les données)
+docker compose down
+
+# Tout arrêter + supprimer les données
+docker compose down -v
 ```
 
 ---
 
 ## 13. Guide de démonstration
 
-Voici l'ordre recommandé pour la soutenance, conçu pour montrer chaque principe SOA en action.
+### Étape 1 — Démarrage
 
-### Étape 1 — Démarrage (1 commande)
 ```bash
-docker-compose up --build
+docker compose up --build -d
+docker compose ps
 ```
-Montrer les 7 conteneurs qui démarrent, les healthchecks qui passent au vert, PostgreSQL qui s'initialise avec les schémas.
+Montrer les 7 conteneurs qui démarrent, les healthchecks qui passent, l'ordre de démarrage respecté.
 
-### Étape 2 — Registre SOA
+### Étape 2 — Registre SOA (découvrabilité)
+
 ```bash
-curl http://localhost:8080/api/registry | python3 -m json.tool
+curl -s http://localhost:8080/api/registry | python3 -m json.tool
 ```
-Montrer les 3 services, leurs dépendances, leurs contrats OpenAPI. C'est la **découvrabilité**.
+Montrer les 3 services, leurs dépendances, leurs contrats OpenAPI.
 
-### Étape 3 — Contrats OpenAPI
+### Étape 3 — Contrats OpenAPI (contrat standardisé)
+
 Ouvrir dans le navigateur :
-- `http://localhost:8080/api/surveillance/api-docs`
+- `http://localhost:8080/api/surveillance/api-docs` → Swagger UI interactif
 - `http://localhost:8080/api/incidents/api-docs`
 
-Montrer que chaque service a un contrat formel — c'est le **contrat standardisé**.
+### Étape 4 — Dashboard temps réel
 
-### Étape 4 — Simulation en temps réel
-Le simulateur tourne déjà. Ouvrir `http://localhost:3000` et montrer les graphiques qui se mettent à jour toutes les 5 secondes.
+Ouvrir `http://localhost:3000`. Montrer :
+- Les KPI cards qui se mettent à jour toutes les 5s
+- La carte avec les quartiers colorés
+- Les graphiques d'évolution
 
 ### Étape 5 — Composition de services
-```bash
-curl -X POST http://localhost:8080/api/incidents/verifier
-```
-Déclencher une vérification manuelle. Dans les logs, montrer que le Service Incidents appelle le Service Surveillance en interne — c'est la **composition**.
 
-### Étape 6 — Déclenchement d'une alerte
-Injecter manuellement une mesure critique :
 ```bash
-curl -X POST http://localhost:8080/api/surveillance/mesures \
+curl -s -X POST http://localhost:8080/api/incidents/verifier | python3 -m json.tool
+```
+Le Service Incidents appelle le Service Surveillance en interne — c'est la composition SOA.
+
+### Étape 6 — Injection d'une alerte critique
+
+```bash
+curl -s -X POST http://localhost:8080/api/surveillance/mesures \
   -H "Content-Type: application/json" \
   -d '{
     "capteur_id": "CAP-PLATEAU-001",
@@ -892,19 +640,25 @@ curl -X POST http://localhost:8080/api/surveillance/mesures \
     "valeur":     45.0,
     "unite":      "°C"
   }'
-```
-Montrer l'incident qui apparaît sur le dashboard ET la notification qui arrive sur le téléphone Flutter.
 
-### Étape 7 — Résilience (le coup de grâce)
-```bash
-docker-compose stop surveillance
-curl http://localhost:8080/api/incidents/health
+# Déclencher la vérification
+curl -s -X POST http://localhost:8080/api/incidents/verifier
 ```
-Montrer que le Service Incidents répond toujours avec son propre statut, et que la Gateway retourne un message d'erreur propre (503) au lieu de crasher. Redémarrer :
+Observer le toast d'alerte et le marqueur rouge pulsant sur la carte.
+
+### Étape 7 — Résilience (autonomie des services)
+
 ```bash
-docker-compose start surveillance
+# Arrêter le service surveillance
+docker compose stop surveillance
+
+# Les autres services répondent toujours
+curl -s http://localhost:8080/api/incidents/health
+# → {"success": true, "data": {"status": "disponible", ...}}
+
+# Relancer
+docker compose start surveillance
 ```
-Le service reprend sans intervention.
 
 ---
 
@@ -912,15 +666,14 @@ Le service reprend sans intervention.
 
 | Couche | Technologie | Justification SOA |
 |---|---|---|
-| Services REST | PHP 8.3 (sans framework) | Contrats explicites, maîtrise totale du code |
-| Contrats | OpenAPI 3.0 (`openapi.yaml`) | Standard industriel de description de services |
-| Bus de services | Nginx (ESB léger) | Routing, logging centralisé, registre |
-| Base de données | PostgreSQL 16 (schémas) | Base partagée SOA, isolation par schéma et utilisateur |
-| Conteneurisation | Docker + Docker Compose | Autonomie des services, démarrage en 1 commande |
-| Client web | React (Vite) + Chart.js + Leaflet | SPA moderne, consomme les services via contrat |
-| Client mobile | Flutter | Notifications locales, polling REST |
-| Simulateur | PHP CLI | Génère des mesures réalistes pour la démo |
+| Services REST | Python 3.12 + FastAPI + uvicorn | Async, multi-workers, contrats auto-générés |
+| Contrats | OpenAPI 3.0 (Swagger UI auto) | Standard industriel, généré automatiquement par FastAPI |
+| Bus de services | Nginx (ESB léger) | Routing, DNS dynamique, registre intégré |
+| Base de données | PostgreSQL 16 (schémas isolés) | Base partagée SOA, isolation par schéma et utilisateur |
+| Conteneurisation | Docker + Docker Compose v2 | Autonomie des services, démarrage en 1 commande |
+| Client web | React (Vite) + Leaflet + Chart.js | SPA temps réel, polling 5s, alertes visuelles |
+| Simulateur IoT | PHP CLI | Génère des mesures réalistes toutes les 5 secondes |
 
 ---
 
-*SenCity — Projet AOS · Master 1 SI/SR · UADB SATIC · 2026*
+*SenCity — Projet SOA · Master 1 SI/SR · UADB SATIC · 2026*

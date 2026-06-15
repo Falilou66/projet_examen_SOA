@@ -1,10 +1,13 @@
-FROM php:8.3-cli-alpine
+FROM python:3.12-slim
 
-RUN apk add --no-cache postgresql-dev curl \
- && docker-php-ext-install pdo pdo_pgsql
+RUN apt-get update && apt-get install -y --no-install-recommends curl libpq-dev gcc \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . .
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY main.py .
 
 EXPOSE 8002
-CMD ["php", "-S", "0.0.0.0:8002", "router.php"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "4"]

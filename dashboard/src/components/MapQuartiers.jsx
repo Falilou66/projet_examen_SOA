@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, CircleMarker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 
 const QUARTIERS = {
@@ -17,20 +18,6 @@ const SEUILS = {
   eau:         { warning: 50,  critique: 80  },
 }
 
-function getStatut(mesures, quartier) {
-  const qm = mesures.filter(m => m.quartier === quartier)
-  if (!qm.length) return 'unknown'
-
-  let statut = 'normal'
-  for (const m of qm) {
-    const s = SEUILS[m.type]
-    if (!s) continue
-    if (+m.valeur > s.critique) return 'critique'
-    if (+m.valeur > s.warning)  statut = 'warning'
-  }
-  return statut
-}
-
 const COULEURS = {
   normal:   '#28a745',
   warning:  '#ffc107',
@@ -43,6 +30,49 @@ const LABELS = {
   warning:  '⚠ Alerte',
   critique: '✕ Critique',
   unknown:  '? Aucune donnée',
+}
+
+function getStatut(mesures, quartier) {
+  const qm = mesures.filter(m => m.quartier === quartier)
+  if (!qm.length) return 'unknown'
+  let statut = 'normal'
+  for (const m of qm) {
+    const s = SEUILS[m.type]
+    if (!s) continue
+    if (+m.valeur > s.critique) return 'critique'
+    if (+m.valeur > s.warning)  statut = 'warning'
+  }
+  return statut
+}
+
+function makeIcon(statut) {
+  const c = COULEURS[statut]
+  if (statut === 'critique') {
+    return L.divIcon({
+      html: `
+        <div class="map-marker">
+          <div class="map-pulse-ring" style="border-color:${c}"></div>
+          <div class="map-pulse-ring map-pulse-ring-2" style="border-color:${c}"></div>
+          <div class="map-dot-inner" style="background:${c}"></div>
+        </div>
+      `,
+      className: '',
+      iconSize: [64, 64],
+      iconAnchor: [32, 32],
+      popupAnchor: [0, -32],
+    })
+  }
+  return L.divIcon({
+    html: `
+      <div class="map-marker">
+        <div class="map-dot-inner" style="background:${c}"></div>
+      </div>
+    `,
+    className: '',
+    iconSize: [64, 64],
+    iconAnchor: [32, 32],
+    popupAnchor: [0, -32],
+  })
 }
 
 export default function MapQuartiers({ mesures }) {
@@ -61,32 +91,22 @@ export default function MapQuartiers({ mesures }) {
       </div>
 
       <div style={{ height: '450px', borderRadius: '8px', overflow: 'hidden' }}>
-        <MapContainer
-          center={[14.72, -17.46]}
-          zoom={12}
-          style={{ height: '100%', width: '100%' }}
-        >
+        <MapContainer center={[14.72, -17.46]} zoom={12} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='&copy; <a href="https://www.openstreetmap.org">OpenStreetMap</a>'
           />
 
           {Object.entries(QUARTIERS).map(([nom, pos]) => {
-            const statut  = getStatut(mesures, nom)
-            const couleur = COULEURS[statut]
-            const qm      = mesures.filter(m => m.quartier === nom)
+            const statut = getStatut(mesures, nom)
+            const qm     = mesures.filter(m => m.quartier === nom)
 
             return (
-              <CircleMarker
-                key={nom}
-                center={pos}
-                radius={28}
-                pathOptions={{ color: couleur, fillColor: couleur, fillOpacity: 0.65, weight: 2 }}
-              >
+              <Marker key={nom} position={pos} icon={makeIcon(statut)}>
                 <Popup>
                   <div style={{ minWidth: 160 }}>
                     <strong style={{ fontSize: '1rem' }}>{nom}</strong>
-                    <div style={{ marginTop: '0.5rem', color: couleur, fontWeight: 'bold' }}>
+                    <div style={{ marginTop: '0.5rem', color: COULEURS[statut], fontWeight: 'bold' }}>
                       {LABELS[statut]}
                     </div>
                     {qm.length > 0 ? (
@@ -107,7 +127,7 @@ export default function MapQuartiers({ mesures }) {
                     )}
                   </div>
                 </Popup>
-              </CircleMarker>
+              </Marker>
             )
           })}
         </MapContainer>

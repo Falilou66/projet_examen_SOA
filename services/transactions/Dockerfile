@@ -6,8 +6,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl libpq-dev 
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
 COPY main.py .
 
-EXPOSE 8001
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--workers", "4"]
+EXPOSE 8002
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8002", "--workers", "4", "--root-path", "/api/transactions"]
