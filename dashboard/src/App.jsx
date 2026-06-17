@@ -1,25 +1,32 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import VueParkingGrille from './components/VueParkingGrille.jsx'
-import ListeVehicules from './components/ListeVehicules.jsx'
+import Dashboard          from './components/Dashboard.jsx'
+import VueParkingGrille  from './components/VueParkingGrille.jsx'
+import ListeVehicules    from './components/ListeVehicules.jsx'
+import AlertesPanel      from './components/AlertesPanel.jsx'
 import StatistiquesParking from './components/StatistiquesParking.jsx'
-import RegistreServices from './components/RegistreServices.jsx'
-import KpiCards from './components/KpiCards.jsx'
+import RegistreServices  from './components/RegistreServices.jsx'
 import { places, transactions } from './services/api.js'
 import './App.css'
 
 let _tid = 0
 
+/* ── Toast ─────────────────────────────────────────────── */
 function Toast({ toast }) {
-  const bg = {
-    danger:  'bg-rose-500',
-    success: 'bg-emerald-500',
-    info:    'bg-slate-800',
-  }[toast.type] ?? 'bg-slate-800'
-
+  const s = {
+    danger:  { bg: '#FEF2F2', bd: '#FECACA', c: '#991B1B', icon: '⚡' },
+    success: { bg: '#ECFDF5', bd: '#6EE7B7', c: '#065F46', icon: '✓'  },
+    info:    { bg: '#FFFFFF', bd: '#E2DDD3', c: '#44403C', icon: 'ℹ'  },
+  }[toast.type] ?? { bg: '#FFFFFF', bd: '#E2DDD3', c: '#44403C', icon: 'ℹ' }
   return (
-    <div className={`${bg} text-white px-4 py-3 rounded-xl shadow-2xl text-sm font-medium
-      max-w-xs animate-slidein flex items-center gap-2`}>
-      {toast.msg}
+    <div className="animate-slidein" style={{
+      background: s.bg, border: `1px solid ${s.bd}`,
+      borderRadius: 10, padding: '12px 16px',
+      color: s.c, fontSize: 13, fontWeight: 500, maxWidth: 320,
+      boxShadow: '0 8px 32px rgba(28,25,23,0.12), 0 2px 8px rgba(28,25,23,0.06)',
+      lineHeight: 1.5, display: 'flex', alignItems: 'flex-start', gap: 10,
+    }}>
+      <span style={{ fontSize: 14, flexShrink: 0, marginTop: 1 }}>{s.icon}</span>
+      <span>{toast.msg}</span>
     </div>
   )
 }
@@ -27,87 +34,75 @@ function Toast({ toast }) {
 function ToastStack({ toasts }) {
   if (!toasts.length) return null
   return (
-    <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-50">
+    <div style={{ position: 'fixed', bottom: 24, right: 24, display: 'flex', flexDirection: 'column', gap: 10, zIndex: 999 }}>
       {toasts.map(t => <Toast key={t.id} toast={t} />)}
     </div>
   )
 }
 
-function AlertesPanel({ alertes, onResoudre }) {
-  if (!alertes.length) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-        <span className="text-5xl mb-3">✅</span>
-        <p className="text-lg font-medium">Aucune alerte active</p>
-        <p className="text-sm mt-1">Le parking fonctionne normalement</p>
-      </div>
-    )
-  }
-  return (
-    <div>
-      <h2 className="text-lg font-bold text-slate-900 mb-4">
-        Alertes actives
-        <span className="ml-2 bg-rose-100 text-rose-600 text-sm font-semibold px-2.5 py-0.5 rounded-full">
-          {alertes.length}
-        </span>
-      </h2>
-      <div className="flex flex-col gap-3">
-        {alertes.map(a => (
-          <div
-            key={a.id}
-            className={`flex items-center gap-4 p-4 rounded-xl border ${
-              a.severite === 'critique'
-                ? 'bg-rose-50 border-rose-200'
-                : 'bg-amber-50 border-amber-200'
-            }`}
-          >
-            <span className="text-2xl">{a.severite === 'critique' ? '🔴' : '🟡'}</span>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-800 text-sm">{a.message}</p>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Zone {a.zone_code} — {new Date(a.cree_le).toLocaleString('fr-FR')}
-              </p>
-            </div>
-            <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-              a.severite === 'critique'
-                ? 'bg-rose-100 text-rose-600'
-                : 'bg-amber-100 text-amber-700'
-            }`}>
-              {a.severite.toUpperCase()}
-            </span>
-            <button
-              onClick={() => onResoudre(a.id)}
-              className="bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold
-                px-3 py-1.5 rounded-lg border-0 transition-colors shrink-0"
-            >
-              Résoudre
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+/* ── SVG Icons ───────────────────────────────────────────── */
+function IconGrid({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" stroke={color} strokeWidth="1.4"/>
+    <rect x="9.5" y="1" width="5.5" height="5.5" rx="1.5" stroke={color} strokeWidth="1.4"/>
+    <rect x="1" y="9.5" width="5.5" height="5.5" rx="1.5" stroke={color} strokeWidth="1.4"/>
+    <rect x="9.5" y="9.5" width="5.5" height="5.5" rx="1.5" stroke={color} strokeWidth="1.4"/>
+  </svg>
+}
+function IconPark({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <rect x="1.5" y="1.5" width="13" height="13" rx="2.5" stroke={color} strokeWidth="1.4"/>
+    <path d="M5.5 11.5V4.5h3a2.5 2.5 0 010 5H5.5" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+}
+function IconCar({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M2.5 8.5l1.2-3.5h8.6l1.2 3.5" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+    <rect x="1.5" y="8.5" width="13" height="4" rx="1.5" stroke={color} strokeWidth="1.4"/>
+    <circle cx="4.5" cy="12.5" r="1" fill={color}/>
+    <circle cx="11.5" cy="12.5" r="1" fill={color}/>
+  </svg>
+}
+function IconBell({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M8 2a4.5 4.5 0 014.5 4.5c0 2.5.5 4 1.5 5H2c1-1 1.5-2.5 1.5-5A4.5 4.5 0 018 2z" stroke={color} strokeWidth="1.4"/>
+    <path d="M6.5 11.5a1.5 1.5 0 003 0" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
+}
+function IconChart({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M1.5 13.5L5 9l3 2.5L11.5 6l3 3" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+}
+function IconApi({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M5.5 10L3 8l2.5-2M10.5 6L13 8l-2.5 2" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M9 5l-2 6" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+  </svg>
 }
 
-const TABS = [
-  { id: 'parking',      icon: '🅿', label: 'Plan parking' },
-  { id: 'vehicules',    icon: '🚗', label: 'Véhicules' },
-  { id: 'alertes',      icon: '⚠',  label: 'Alertes' },
-  { id: 'statistiques', icon: '📊', label: 'Statistiques' },
-  { id: 'registre',     icon: '⚙',  label: 'Registre SOA' },
+const NAV = [
+  { id: 'dashboard',    label: 'Dashboard',     icon: IconGrid,  group: 'main' },
+  { id: 'parking',      label: 'Plan parking',  icon: IconPark,  group: 'main' },
+  { id: 'vehicules',    label: 'Véhicules',     icon: IconCar,   group: 'main' },
+  { id: 'alertes',      label: 'Alertes',       icon: IconBell,  group: 'main' },
+  { id: 'statistiques', label: 'Statistiques',  icon: IconChart, group: 'data' },
+  { id: 'registre',     label: 'Registre SOA',  icon: IconApi,   group: 'data' },
 ]
 
+/* ── App ────────────────────────────────────────────────── */
 export default function App() {
-  const [tab, setTab]             = useState('parking')
-  const [stats, setStats]         = useState(null)
-  const [zones, setZones]         = useState([])
-  const [allPlaces, setAllPlaces] = useState([])
-  const [encours, setEncours]     = useState([])
-  const [alertes, setAlertes]     = useState([])
-  const [toasts, setToasts]       = useState([])
+  const [tab, setTab]               = useState('dashboard')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [stats, setStats]           = useState(null)
+  const [zones, setZones]           = useState([])
+  const [allPlaces, setAllPlaces]   = useState([])
+  const [encours, setEncours]       = useState([])
+  const [alertes, setAlertes]       = useState([])
+  const [toasts, setToasts]         = useState([])
   const [lastUpdate, setLastUpdate] = useState(null)
-  const initialized  = useRef(false)
-  const prevAlertes  = useRef(0)
+  const initialized = useRef(false)
+  const prevAlertes = useRef(0)
 
   const addToast = useCallback((msg, type = 'info') => {
     const id = ++_tid
@@ -118,11 +113,8 @@ export default function App() {
   const refresh = useCallback(async () => {
     try {
       const [s, z, p, e, a] = await Promise.all([
-        places.getStats(),
-        places.getZones(),
-        places.getAll(),
-        transactions.getEncours(),
-        transactions.getAlertes('active'),
+        places.getStats(), places.getZones(), places.getAll(),
+        transactions.getEncours(), transactions.getAlertes('active'),
       ])
       if (s.success) setStats(s.data)
       if (z.success) setZones(z.data)
@@ -130,9 +122,8 @@ export default function App() {
       if (e.success) setEncours(e.data)
       if (a.success) {
         const nb = a.data.length
-        if (initialized.current && nb > prevAlertes.current) {
-          addToast(`🚨 ${nb - prevAlertes.current} nouvelle(s) alerte(s) !`, 'danger')
-        }
+        if (initialized.current && nb > prevAlertes.current)
+          addToast(`${nb - prevAlertes.current} nouvelle(s) alerte(s) détectée(s)`, 'danger')
         prevAlertes.current = nb
         setAlertes(a.data)
         initialized.current = true
@@ -143,86 +134,206 @@ export default function App() {
 
   useEffect(() => {
     refresh()
-    const id = setInterval(refresh, 5_000)
+    const id = setInterval(refresh, 5000)
     return () => clearInterval(id)
   }, [refresh])
 
   const handleResoudre = async (id) => {
     try {
       const res = await transactions.resoudreAlerte(id)
-      if (res.success) { addToast('Alerte résolue', 'success'); refresh() }
+      if (res.success) { addToast('Alerte résolue avec succès', 'success'); refresh() }
     } catch {}
   }
 
-  const tabLabel = (t) => {
-    if (t.id === 'vehicules')  return `${t.label} (${encours.length})`
-    if (t.id === 'alertes')    return `${t.label}${alertes.length ? ` (${alertes.length})` : ''}`
-    return t.label
+  const handleEntree = async (data) => {
+    try {
+      const res = await transactions.entree(data)
+      if (res.success) {
+        addToast(`Entrée enregistrée — ${res.data.plaque} → Place ${res.data.place_code}`, 'success')
+        refresh(); return { ok: true }
+      }
+      return { ok: false, error: res.error }
+    } catch { return { ok: false, error: 'Erreur réseau' } }
   }
 
+  const handleSortie = async (txId) => {
+    try {
+      const res = await transactions.sortie({ transaction_id: txId })
+      if (res.success) {
+        const m = Number(res.data.montant_fcfa).toLocaleString('fr-FR')
+        addToast(`Sortie enregistrée — ${res.data.plaque} · ${m} FCFA`, 'success')
+        refresh(); return { ok: true }
+      }
+      return { ok: false, error: res.error }
+    } catch { return { ok: false, error: 'Erreur réseau' } }
+  }
+
+  const navigate = (id) => { setTab(id); setSidebarOpen(false) }
+
+  const nbAlert  = alertes.length
+  const encBadge = encours.length
+  const taux     = parseFloat(stats?.taux_occupation ?? 0)
+
   return (
-    <div className="min-h-screen bg-slate-100">
-      {/* ── Header ─────────────────────────────────────────── */}
-      <header className="bg-gradient-to-r from-slate-900 to-slate-800 shadow-xl">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-indigo-500 text-white w-12 h-12 rounded-2xl flex items-center
-              justify-center text-2xl font-black shadow-lg shadow-indigo-500/30">
-              P
-            </div>
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+
+      {sidebarOpen && (
+        <div className="sidebar-overlay animate-fadein" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      {/* ── Sidebar ─────────────────────────────────────── */}
+      <aside className={`sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
+
+        {/* Logo */}
+        <div style={{ padding: '18px 14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
+              background: '#EA580C',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
+              boxShadow: '0 3px 10px rgba(234,88,12,0.4)',
+            }}>SP</div>
             <div>
-              <h1 className="text-white text-xl font-bold tracking-tight">SmartParking</h1>
-              <p className="text-slate-400 text-xs">Gestion intelligente — Architecture SOA</p>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.2px' }}>SmartParking</div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', fontWeight: 400, marginTop: 1 }}>SOA Platform · v2.0</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: '14px 10px 8px' }}>
+          {[
+            { group: 'main', label: 'Principal' },
+            { group: 'data', label: 'Données' },
+          ].map(({ group, label }) => {
+            const items = NAV.filter(n => n.group === group)
+            return (
+              <div key={group} style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.2)', padding: '0 11px 8px', textTransform: 'uppercase' }}>
+                  {label}
+                </div>
+                {items.map(item => {
+                  const active = tab === item.id
+                  const badge  = item.id === 'alertes'  ? (nbAlert  > 0 ? nbAlert  : null)
+                               : item.id === 'vehicules' ? (encBadge > 0 ? encBadge : null)
+                               : null
+                  const Icon = item.icon
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => navigate(item.id)}
+                      className={`nav-item${active ? ' active' : ''}`}
+                      style={{ marginBottom: 2 }}
+                    >
+                      <span style={{ color: active ? '#FB923C' : 'rgba(255,255,255,0.28)', flexShrink: 0 }}>
+                        <Icon size={15} color="currentColor" />
+                      </span>
+                      <span style={{ flex: 1 }}>{item.label}</span>
+                      {badge != null && (
+                        <span className={item.id === 'alertes' ? 'animate-pulsebadge' : ''} style={{
+                          minWidth: 19, height: 19, borderRadius: 5,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: 10, fontWeight: 700, paddingInline: 5,
+                          fontFamily: "'Space Mono', monospace",
+                          background: item.id === 'alertes' ? 'rgba(220,38,38,0.2)' : 'rgba(234,88,12,0.16)',
+                          color:      item.id === 'alertes' ? '#FCA5A5' : '#FB923C',
+                          border:     `1px solid ${item.id === 'alertes' ? 'rgba(220,38,38,0.3)' : 'rgba(234,88,12,0.28)'}`,
+                        }}>
+                          {badge}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </nav>
+
+        {/* Bottom status */}
+        <div style={{ padding: '12px 14px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <span style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(255,255,255,0.32)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Occupation</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: stats ? 'rgba(255,255,255,0.72)' : 'rgba(255,255,255,0.18)', fontFamily: "'Space Mono', monospace" }}>
+                {stats ? `${stats.occupees}/${stats.total}` : '—'}
+              </span>
+            </div>
+            <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              {stats && (
+                <div style={{
+                  height: '100%', borderRadius: 2,
+                  width: `${Math.min(taux, 100)}%`,
+                  background: taux >= 90 ? '#DC2626' : taux >= 75 ? '#D97706' : '#059669',
+                  transition: 'width 0.6s ease',
+                }} />
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {lastUpdate && (
-              <div className="flex items-center gap-2 text-slate-400 text-xs">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-live inline-block" />
-                MAJ {lastUpdate.toLocaleTimeString('fr-FR')}
-              </div>
-            )}
-            {alertes.length > 0 && (
-              <span className="bg-rose-500 text-white text-xs font-bold px-3 py-1.5
-                rounded-full animate-pulsebadge">
-                {alertes.length} alerte{alertes.length > 1 ? 's' : ''}
+          {lastUpdate && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span className="animate-live" style={{ width: 6, height: 6, borderRadius: '50%', background: '#059669', display: 'inline-block', flexShrink: 0 }} />
+              <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontWeight: 400 }}>
+                Sync {lastUpdate.toLocaleTimeString('fr-FR')}
               </span>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </header>
+      </aside>
 
-      <div className="max-w-7xl mx-auto px-6 py-6 flex flex-col gap-5">
-        {/* ── KPI Cards ──────────────────────────────────────── */}
-        <KpiCards stats={stats} alertes={alertes} />
+      {/* ── Main ────────────────────────────────────────── */}
+      <div className="main-shell">
 
-        {/* ── Navigation ─────────────────────────────────────── */}
-        <div className="flex gap-1 bg-white rounded-2xl p-1.5 shadow-sm border border-slate-100 flex-wrap">
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                transition-all border-0 flex-1 justify-center min-w-[120px]
-                ${tab === t.id
-                  ? 'bg-slate-900 text-white shadow-md'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50 bg-transparent'
-                }`}
-            >
-              <span>{t.icon}</span>
-              <span>{tabLabel(t)}</span>
+        {/* Header */}
+        <header style={{
+          padding: '0 24px', height: 'var(--header-h)',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          borderBottom: '1px solid var(--b0)',
+          background: 'rgba(243,241,236,0.94)',
+          backdropFilter: 'blur(14px)',
+          position: 'sticky', top: 0, zIndex: 100, flexShrink: 0,
+          boxShadow: '0 1px 0 var(--b0)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="hamburger" onClick={() => setSidebarOpen(o => !o)} aria-label="Menu">
+              <span /><span /><span />
             </button>
-          ))}
-        </div>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--t1)', letterSpacing: '-0.2px' }}>
+              {NAV.find(n => n.id === tab)?.label ?? 'Dashboard'}
+            </span>
+          </div>
 
-        {/* ── Contenu principal ───────────────────────────────── */}
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 min-h-[500px]">
-          {tab === 'parking'      && <VueParkingGrille places={allPlaces} zones={zones} />}
-          {tab === 'vehicules'    && <ListeVehicules encours={encours} onRefresh={refresh} />}
-          {tab === 'alertes'      && <AlertesPanel alertes={alertes} onResoudre={handleResoudre} />}
-          {tab === 'statistiques' && <StatistiquesParking />}
-          {tab === 'registre'     && <RegistreServices />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {nbAlert > 0 && (
+              <button onClick={() => navigate('alertes')} className="animate-pulsebadge" style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 20,
+                background: 'var(--red-lt)', border: '1px solid var(--red-bd)',
+                color: 'var(--red)', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+              }}>
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--red)', display: 'inline-block' }} />
+                {nbAlert} alerte{nbAlert > 1 ? 's' : ''}
+              </button>
+            )}
+            <div style={{ fontSize: 11, color: 'var(--t4)', fontWeight: 500 }} className="hide-mobile">
+              {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+            </div>
+          </div>
+        </header>
+
+        {/* Orange→sky accent bar */}
+        <div style={{ height: 2, background: 'linear-gradient(90deg,#EA580C,#F97316 40%,#0284C7)', flexShrink: 0 }} />
+
+        {/* Content */}
+        <div key={tab} className="animate-fadeup content-pad" style={{ flex: 1, padding: '24px 28px 56px', overflowY: 'auto', minHeight: 0 }}>
+          {tab === 'dashboard'    && <Dashboard        stats={stats} zones={zones} allPlaces={allPlaces} encours={encours} alertes={alertes} onEntree={handleEntree} onSortie={handleSortie} onTabChange={navigate} />}
+          {tab === 'parking'     && <VueParkingGrille  places={allPlaces} zones={zones} />}
+          {tab === 'vehicules'   && <ListeVehicules    encours={encours} onEntree={handleEntree} onSortie={handleSortie} />}
+          {tab === 'alertes'     && <AlertesPanel      alertes={alertes} onResoudre={handleResoudre} />}
+          {tab === 'statistiques'&& <StatistiquesParking />}
+          {tab === 'registre'    && <RegistreServices />}
         </div>
       </div>
 

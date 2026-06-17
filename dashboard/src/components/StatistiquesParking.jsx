@@ -7,47 +7,111 @@ const PERIODES = [
   { id: 'mois',        label: '30 jours' },
 ]
 
-const ZONE_COLOR  = { A: 'bg-blue-500',   B: 'bg-violet-500',  C: 'bg-amber-500'  }
-const TYPE_COLOR  = { voiture: 'bg-indigo-500', moto: 'bg-cyan-500', camion: 'bg-orange-500' }
-const TYPE_ICON   = { voiture: '🚗', moto: '🏍', camion: '🚛' }
+const ZONE_GRAD = {
+  A: 'linear-gradient(90deg,#1d4ed8,#3b82f6)',
+  B: 'linear-gradient(90deg,#6d28d9,#8b5cf6)',
+  C: 'linear-gradient(90deg,#b45309,#d97706)',
+}
+const TYPE_GRAD = {
+  voiture: 'linear-gradient(90deg,#312e81,#6366f1)',
+  moto:    'linear-gradient(90deg,#164e63,#06b6d4)',
+  camion:  'linear-gradient(90deg,#7c2d12,#f97316)',
+}
+const TYPE_ICON = { voiture: '🚗', moto: '🏍', camion: '🚛' }
 
-function StatCard({ icon, value, label, sub, color = 'bg-slate-100 text-slate-700' }) {
+function MiniKpi({ value, label, icon, color }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col gap-1 shadow-sm">
-      <span className="text-xl">{icon}</span>
-      <span className="text-2xl font-black text-slate-900">{value}</span>
-      <span className="text-xs text-slate-500 uppercase tracking-wide font-medium">{label}</span>
-      {sub && <span className={`text-xs font-semibold px-2 py-0.5 rounded-full self-start ${color}`}>{sub}</span>}
+    <div style={{
+      background: '#ffffff', border: '1px solid #e2e8f0',
+      borderRadius: 12, padding: '14px 16px',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    }}>
+      <div style={{ fontSize: 18, marginBottom: 6, lineHeight: 1 }}>{icon}</div>
+      <div style={{
+        fontSize: 22, fontWeight: 800, color: color ?? '#0f172a',
+        fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px',
+      }}>
+        {value}
+      </div>
+      <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#94a3b8', marginTop: 4 }}>
+        {label}
+      </div>
     </div>
   )
 }
 
-function HBarRow({ label, value, maxVal, colorClass, icon }) {
-  const pct = maxVal > 0 ? (value / maxVal) * 100 : 0
+function HBar({ label, value, maxVal, grad, icon }) {
+  const pct = maxVal > 0 ? Math.max((value / maxVal) * 100, value > 0 ? 1.5 : 0) : 0
   return (
-    <div className="flex items-center gap-3">
-      <div className="w-20 text-right text-xs font-medium text-slate-600 shrink-0">
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ width: 80, textAlign: 'right', fontSize: 11, color: '#64748b', flexShrink: 0, whiteSpace: 'nowrap' }}>
         {icon ? `${icon} ` : ''}{label}
       </div>
-      <div className="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${colorClass}`}
-          style={{ width: `${Math.max(pct, value > 0 ? 2 : 0)}%` }}
-        />
+      <div style={{ flex: 1, height: 8, borderRadius: 4, background: '#f1f5f9', overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', borderRadius: 4, width: `${pct}%`,
+          background: grad ?? 'linear-gradient(90deg,#4f46e5,#818cf8)',
+          transition: 'width 0.6s cubic-bezier(.22,.68,0,1.2)',
+        }} />
       </div>
-      <div className="w-28 text-xs font-bold text-slate-700 shrink-0">
-        {Number(value).toLocaleString('fr-FR')} FCFA
+      <div style={{ width: 90, fontSize: 11, fontWeight: 700, color: '#475569', flexShrink: 0, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+        {Number(value).toLocaleString('fr-FR')} F
+      </div>
+    </div>
+  )
+}
+
+function BarChart({ data, pointe }) {
+  const maxVal = Math.max(...Object.values(data).map(Number), 1)
+  const entries = Object.entries(data)
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 80 }}>
+        {entries.map(([h, n]) => {
+          const pct     = maxVal > 0 ? (Number(n) / maxVal) * 100 : 0
+          const isMax   = Number(h) === Number(pointe)
+          const visible = Number(n) > 0
+          return (
+            <div
+              key={h}
+              style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center' }}
+              title={`${h}h : ${n} entrée(s)`}
+            >
+              <div style={{
+                width: '100%',
+                height: `${Math.max(pct, visible ? 2 : 0)}%`,
+                minHeight: visible ? 2 : 0,
+                borderRadius: '3px 3px 0 0',
+                background: isMax
+                  ? 'linear-gradient(180deg,#e11d48,#be123c)'
+                  : 'linear-gradient(180deg,#6366f1,#4338ca)',
+                transition: 'background 0.2s',
+              }} />
+            </div>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', marginTop: 6 }}>
+        {entries.map(([h]) => (
+          <div key={h} style={{
+            flex: 1, fontSize: 9, textAlign: 'center',
+            color: Number(h) % 6 === 0 ? '#94a3b8' : 'transparent',
+            userSelect: 'none',
+          }}>
+            {h}h
+          </div>
+        ))}
       </div>
     </div>
   )
 }
 
 export default function StatistiquesParking() {
-  const [periode, setPeriode] = useState('aujourd_hui')
-  const [stats, setStats]     = useState(null)
-  const [revenus, setRevenus] = useState(null)
+  const [periode, setPeriode]     = useState('aujourd_hui')
+  const [stats, setStats]         = useState(null)
+  const [revenus, setRevenus]     = useState(null)
   const [tendances, setTendances] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading]     = useState(true)
 
   const load = async () => {
     setLoading(true)
@@ -68,41 +132,52 @@ export default function StatistiquesParking() {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-        <div className="w-8 h-8 border-4 border-indigo-300 border-t-indigo-600 rounded-full animate-spin mb-3" />
-        <p>Chargement des statistiques…</p>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '64px 0', gap: 12 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: '50%',
+          border: '3px solid #e2e8f0', borderTop: '3px solid #6366f1',
+          animation: 'spin 0.8s linear infinite',
+        }} />
+        <span style={{ fontSize: 12, color: '#94a3b8' }}>Calcul des statistiques…</span>
       </div>
     )
   }
 
-  const parZone = revenus?.par_zone ?? {}
-  const parType = revenus?.par_type_vehicule ?? {}
-  const maxZone = Math.max(...Object.values(parZone).map(Number), 1)
-  const maxType = Math.max(...Object.values(parType).map(Number), 1)
-
-  const parHeure   = tendances?.transactions_par_heure ?? {}
-  const maxHeure   = Math.max(...Object.values(parHeure).map(Number), 1)
+  const parZone     = revenus?.par_zone ?? {}
+  const parType     = revenus?.par_type_vehicule ?? {}
+  const maxZone     = Math.max(...Object.values(parZone).map(Number), 1)
+  const maxType     = Math.max(...Object.values(parType).map(Number), 1)
+  const parHeure    = tendances?.transactions_par_heure ?? {}
   const heurePointe = tendances?.heure_pointe
+  const occ         = stats?.occupation_actuelle
 
-  const totalRevFmt = Number(revenus?.total_fcfa ?? 0).toLocaleString('fr-FR')
-  const occActuelle = stats?.occupation_actuelle
+  const card = {
+    background: '#ffffff', border: '1px solid #e2e8f0',
+    borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+  }
 
   return (
     <div>
-      {/* Titre + Période + Export */}
-      <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-        <h2 className="text-lg font-bold text-slate-900">Statistiques</h2>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-slate-100 rounded-xl p-1 gap-1">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+        <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Statistiques</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{
+            display: 'flex', gap: 2,
+            background: '#f1f5f9', border: '1px solid #e2e8f0',
+            borderRadius: 10, padding: 4,
+          }}>
             {PERIODES.map(p => (
               <button
                 key={p.id}
                 onClick={() => setPeriode(p.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold border-0 transition-all ${
-                  periode === p.id
-                    ? 'bg-white text-slate-900 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700 bg-transparent'
-                }`}
+                style={{
+                  padding: '5px 12px', borderRadius: 7, fontSize: 11, fontWeight: 600,
+                  border: 'none', cursor: 'pointer', transition: 'all 0.15s',
+                  background: periode === p.id ? '#ffffff' : 'transparent',
+                  color: periode === p.id ? '#4f46e5' : '#64748b',
+                  boxShadow: periode === p.id ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}
               >
                 {p.label}
               </button>
@@ -111,108 +186,81 @@ export default function StatistiquesParking() {
           <a
             href={`/api/reporting/rapport/export?periode=${periode}`}
             download
-            className="flex items-center gap-1.5 bg-slate-900 text-white text-xs font-semibold
-              px-3 py-2 rounded-xl hover:bg-slate-700 transition-colors no-underline"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '6px 14px', borderRadius: 9,
+              background: 'rgba(79,70,229,0.08)', border: '1px solid rgba(79,70,229,0.2)',
+              color: '#4f46e5', fontSize: 11, fontWeight: 600,
+              textDecoration: 'none', transition: 'all 0.15s',
+            }}
           >
             ⬇ CSV
           </a>
         </div>
       </div>
 
-      {/* KPIs résumé */}
+      {/* Mini KPIs */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-6">
-          <StatCard icon="⬆" value={stats.nb_entrees}  label="Entrées" />
-          <StatCard icon="⬇" value={stats.nb_sorties}  label="Sorties" />
-          <StatCard icon="⏱" value={`${stats.duree_moyenne_minutes} min`} label="Durée moy." />
-          <StatCard
-            icon="💰"
-            value={`${Number(stats.revenus_fcfa ?? 0).toLocaleString('fr-FR')} F`}
-            label="Revenus"
-            color="bg-emerald-100 text-emerald-700"
-            sub="FCFA"
-          />
-          {occActuelle && (
-            <StatCard
-              icon="📊"
-              value={`${occActuelle.taux_occupation ?? 0}%`}
-              label="Occupation"
-              sub={`${occActuelle.occupees ?? 0}/${occActuelle.total ?? 0} places`}
-              color={parseFloat(occActuelle.taux_occupation) >= 90 ? 'bg-rose-100 text-rose-600' : 'bg-indigo-100 text-indigo-600'}
-            />
+        <div className="g-5" style={{ marginBottom: 20 }}>
+          <MiniKpi icon="⬆" value={stats.nb_entrees} label="Entrées" />
+          <MiniKpi icon="⬇" value={stats.nb_sorties} label="Sorties" />
+          <MiniKpi icon="⏱" value={`${stats.duree_moyenne_minutes}m`} label="Durée moy." />
+          <MiniKpi icon="💰" value={`${Number(stats.revenus_fcfa ?? 0).toLocaleString('fr-FR')} F`} label="Revenus" color="#059669" />
+          {occ && (
+            <MiniKpi icon="📊" value={`${occ.taux_occupation ?? 0}%`} label="Occupation"
+              color={parseFloat(occ.taux_occupation) >= 90 ? '#e11d48' : '#4f46e5'} />
           )}
         </div>
       )}
 
-      {/* Revenus */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <h3 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2">
-            💰 Revenus par zone
-            <span className="text-slate-400 font-normal text-xs ml-auto">Total : {totalRevFmt} FCFA</span>
-          </h3>
-          <div className="flex flex-col gap-3">
+      {/* Revenue bars */}
+      <div className="g-2" style={{ marginBottom: 14 }}>
+        <div style={{ ...card, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Revenus par zone</span>
+            <span style={{ fontSize: 10, color: '#94a3b8' }}>
+              Total : {Number(revenus?.total_fcfa ?? 0).toLocaleString('fr-FR')} F
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {Object.entries(parZone).map(([z, v]) => (
-              <HBarRow key={z} label={`Zone ${z}`} value={Number(v)} maxVal={maxZone}
-                colorClass={ZONE_COLOR[z] ?? 'bg-slate-400'} />
+              <HBar key={z} label={`Zone ${z}`} value={Number(v)} maxVal={maxZone} grad={ZONE_GRAD[z]} />
             ))}
             {Object.keys(parZone).length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-3">Aucune donnée</p>
+              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>Aucune donnée</p>
             )}
           </div>
         </div>
 
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <h3 className="text-sm font-bold text-slate-700 mb-3">🚗 Revenus par type</h3>
-          <div className="flex flex-col gap-3">
+        <div style={{ ...card, padding: '16px 18px' }}>
+          <div style={{ marginBottom: 14 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Revenus par type</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {Object.entries(parType).map(([t, v]) => (
-              <HBarRow key={t} label={t} value={Number(v)} maxVal={maxType}
-                colorClass={TYPE_COLOR[t] ?? 'bg-slate-400'} icon={TYPE_ICON[t]} />
+              <HBar key={t} label={t} value={Number(v)} maxVal={maxType} grad={TYPE_GRAD[t]} icon={TYPE_ICON[t]} />
             ))}
             {Object.keys(parType).length === 0 && (
-              <p className="text-sm text-slate-400 text-center py-3">Aucune donnée</p>
+              <p style={{ margin: 0, fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: '12px 0' }}>Aucune donnée</p>
             )}
           </div>
         </div>
       </div>
 
-      {/* Graphique horaire */}
+      {/* Hourly chart */}
       {tendances && (
-        <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
-          <h3 className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
-            📈 Fréquentation par heure (24h)
+        <div style={{ ...card, padding: '16px 18px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#475569' }}>Fréquentation horaire — 24h</span>
             {heurePointe !== undefined && (
-              <span className="text-xs font-normal text-slate-400 ml-auto">
-                Pointe : {heurePointe}h ({tendances.nb_heure_pointe} véhicules)
+              <span style={{ fontSize: 10, color: '#94a3b8' }}>
+                Pointe :{' '}
+                <span style={{ color: '#e11d48', fontWeight: 700 }}>{heurePointe}h</span>
+                {' '}({tendances.nb_heure_pointe} véh.)
               </span>
             )}
-          </h3>
-          <div className="flex items-end gap-0.5 h-20 mt-3 px-1">
-            {Object.entries(parHeure).map(([h, n]) => {
-              const pct  = maxHeure > 0 ? (Number(n) / maxHeure) * 100 : 0
-              const isPointe = Number(h) === Number(heurePointe)
-              return (
-                <div
-                  key={h}
-                  className="flex-1 flex flex-col justify-end items-center group relative"
-                  title={`${h}h : ${n} entrée(s)`}
-                >
-                  <div
-                    className={`w-full rounded-t transition-all duration-300 ${
-                      isPointe ? 'bg-rose-500' : 'bg-indigo-400 group-hover:bg-indigo-500'
-                    }`}
-                    style={{ height: `${Math.max(pct, Number(n) > 0 ? 3 : 0)}%` }}
-                  />
-                  {Number(h) % 6 === 0 && (
-                    <span className="text-[9px] text-slate-400 mt-1 absolute -bottom-4">{h}h</span>
-                  )}
-                </div>
-              )
-            })}
           </div>
-          <div className="mt-6 flex justify-between text-[10px] text-slate-400 px-1">
-            <span>0h</span><span>6h</span><span>12h</span><span>18h</span><span>23h</span>
-          </div>
+          <BarChart data={parHeure} pointe={heurePointe} />
         </div>
       )}
     </div>

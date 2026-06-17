@@ -1,23 +1,103 @@
-function Card({ icon, value, label, sub, color, flash }) {
-  const colors = {
-    green:  { bg: 'bg-emerald-50', border: 'border-emerald-200', icon: 'bg-emerald-100 text-emerald-600', val: 'text-emerald-700', sub: 'text-emerald-600 bg-emerald-100' },
-    red:    { bg: 'bg-rose-50',    border: 'border-rose-200',    icon: 'bg-rose-100 text-rose-600',       val: 'text-rose-700',    sub: 'text-rose-600 bg-rose-100' },
-    amber:  { bg: 'bg-amber-50',   border: 'border-amber-200',   icon: 'bg-amber-100 text-amber-600',     val: 'text-amber-700',   sub: 'text-amber-600 bg-amber-100' },
-    indigo: { bg: 'bg-indigo-50',  border: 'border-indigo-200',  icon: 'bg-indigo-100 text-indigo-600',   val: 'text-indigo-700',  sub: 'text-indigo-600 bg-indigo-100' },
-    slate:  { bg: 'bg-white',      border: 'border-slate-200',   icon: 'bg-slate-100 text-slate-600',     val: 'text-slate-800',   sub: 'text-slate-600 bg-slate-100' },
+function KpiCard({ value, label, sub, color, flash, icon }) {
+  const palette = {
+    green:  {
+      icon:   'rgba(16,185,129,0.18)',
+      iconC:  '#10b981',
+      val:    '#34d399',
+      subBg:  'rgba(16,185,129,0.12)',
+      subC:   '#6ee7b7',
+      subBd:  'rgba(16,185,129,0.2)',
+      glow:   'rgba(16,185,129,0.18)',
+    },
+    red: {
+      icon:   'rgba(244,63,94,0.18)',
+      iconC:  '#f43f5e',
+      val:    '#fb7185',
+      subBg:  'rgba(244,63,94,0.12)',
+      subC:   '#fda4af',
+      subBd:  'rgba(244,63,94,0.25)',
+      glow:   'rgba(244,63,94,0.2)',
+    },
+    amber: {
+      icon:   'rgba(245,158,11,0.18)',
+      iconC:  '#f59e0b',
+      val:    '#fbbf24',
+      subBg:  'rgba(245,158,11,0.12)',
+      subC:   '#fde68a',
+      subBd:  'rgba(245,158,11,0.25)',
+      glow:   'rgba(245,158,11,0.15)',
+    },
+    indigo: {
+      icon:   'rgba(99,102,241,0.18)',
+      iconC:  '#6366f1',
+      val:    '#a5b4fc',
+      subBg:  'rgba(99,102,241,0.12)',
+      subC:   '#c7d2fe',
+      subBd:  'rgba(99,102,241,0.25)',
+      glow:   'rgba(99,102,241,0.15)',
+    },
   }
-  const c = colors[color] ?? colors.slate
+  const p = palette[color] ?? palette.indigo
+
   return (
-    <div className={`${c.bg} ${c.border} ${flash ? 'animate-kpiflash' : ''}
-      border rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:-translate-y-0.5
-      transition-transform duration-150`}>
-      <div className={`${c.icon} w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold shrink-0`}>
+    <div
+      className={flash ? 'animate-kpiflash' : ''}
+      style={{
+        background: 'rgba(255,255,255,0.035)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 16,
+        padding: '18px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        transition: 'transform 0.15s, box-shadow 0.15s',
+        cursor: 'default',
+        boxShadow: flash ? undefined : `0 0 0 0 transparent`,
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.transform = 'translateY(-2px)'
+        e.currentTarget.style.boxShadow = `0 8px 32px ${p.glow}, 0 2px 8px rgba(0,0,0,0.3)`
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.transform = ''
+        e.currentTarget.style.boxShadow = ''
+        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'
+      }}
+    >
+      {/* Icon */}
+      <div style={{
+        width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+        background: p.icon,
+        border: `1px solid ${p.subBd}`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, color: p.iconC,
+        boxShadow: `0 0 16px ${p.glow}`,
+      }}>
         {icon}
       </div>
-      <div className="min-w-0">
-        <div className={`${c.val} text-2xl font-black leading-none`}>{value}</div>
-        <div className="text-slate-500 text-xs mt-1 uppercase tracking-wide font-medium">{label}</div>
-        <span className={`${c.sub} text-xs font-semibold px-2 py-0.5 rounded-full mt-1 inline-block`}>
+
+      {/* Text */}
+      <div style={{ minWidth: 0 }}>
+        <div style={{
+          fontSize: 26, fontWeight: 800, lineHeight: 1,
+          color: p.val,
+          letterSpacing: '-0.5px',
+          fontVariantNumeric: 'tabular-nums',
+        }}>
+          {value}
+        </div>
+        <div style={{
+          fontSize: 10, fontWeight: 600, letterSpacing: '0.08em',
+          textTransform: 'uppercase', color: '#475569', marginTop: 5,
+        }}>
+          {label}
+        </div>
+        <span style={{
+          display: 'inline-block', marginTop: 4,
+          fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+          background: p.subBg, color: p.subC, border: `1px solid ${p.subBd}`,
+        }}>
           {sub}
         </span>
       </div>
@@ -28,12 +108,12 @@ function Card({ icon, value, label, sub, color, flash }) {
 export default function KpiCards({ stats, alertes }) {
   if (!stats) {
     return (
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-100 rounded-2xl p-5 h-24 animate-pulse">
-            <div className="bg-slate-100 rounded-xl h-8 w-8 mb-2" />
-            <div className="bg-slate-100 rounded h-5 w-16" />
-          </div>
+          <div key={i} style={{
+            borderRadius: 16, padding: '18px 20px', height: 90,
+            border: '1px solid rgba(255,255,255,0.06)',
+          }} className="skeleton" />
         ))}
       </div>
     )
@@ -46,35 +126,35 @@ export default function KpiCards({ stats, alertes }) {
   const nbAlerts = alertes?.length ?? 0
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <Card
-        icon="🟢"
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+      <KpiCard
+        icon="○"
         value={libres}
         label="Places libres"
-        sub={libres === 0 ? 'Complet !' : libres <= 5 ? 'Presque plein' : `/ ${total} places`}
+        sub={libres === 0 ? 'Complet !' : libres <= 5 ? 'Presque plein' : `sur ${total}`}
         color={libres === 0 ? 'red' : libres <= 5 ? 'amber' : 'green'}
         flash={libres === 0}
       />
-      <Card
-        icon="🚗"
+      <KpiCard
+        icon="▲"
         value={occupees}
         label="Véhicules garés"
         sub={`sur ${total} places`}
         color="indigo"
       />
-      <Card
-        icon="📊"
+      <KpiCard
+        icon="%"
         value={`${taux.toFixed(1)}%`}
         label="Taux d'occupation"
         sub={taux >= 90 ? 'Critique' : taux >= 75 ? 'Élevé' : 'Normal'}
         color={taux >= 90 ? 'red' : taux >= 75 ? 'amber' : 'green'}
         flash={taux >= 90}
       />
-      <Card
-        icon="⚠"
+      <KpiCard
+        icon="⚡"
         value={nbAlerts}
         label="Alertes actives"
-        sub={nbAlerts > 0 ? 'Attention !' : 'Tout va bien'}
+        sub={nbAlerts > 0 ? 'Attention requise' : 'Tout va bien'}
         color={nbAlerts > 0 ? 'red' : 'green'}
         flash={nbAlerts > 0}
       />
