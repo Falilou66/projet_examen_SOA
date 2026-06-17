@@ -54,7 +54,7 @@ function KCard({ val, label, sub, color, icon, flash, onClick }) {
 
   return (
     <div
-      className={`sp-card${flash ? ' animate-kpiflash' : ''}`}
+      className={`sp-card kpi-card${flash ? ' animate-kpiflash' : ''}`}
       onClick={onClick}
       style={{
         padding: '18px 20px',
@@ -66,7 +66,7 @@ function KCard({ val, label, sub, color, icon, flash, onClick }) {
       onMouseEnter={e => { e.currentTarget.style.boxShadow = `0 6px 22px ${P.gl}`; e.currentTarget.style.transform = 'translateY(-2px)' }}
       onMouseLeave={e => { e.currentTarget.style.boxShadow = ''; e.currentTarget.style.transform = '' }}
     >
-      <div style={{
+      <div className="kpi-icon" style={{
         width: 44, height: 44, borderRadius: 10, flexShrink: 0,
         background: P.lt, border: `1px solid ${P.bd}`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -75,7 +75,7 @@ function KCard({ val, label, sub, color, icon, flash, onClick }) {
         {icon}
       </div>
       <div>
-        <div style={{ fontSize: 26, fontWeight: 700, color: P.vc, lineHeight: 1.1, letterSpacing: '-1.5px', fontFamily: "'Space Mono', monospace" }}>
+        <div className="kpi-num" style={{ fontSize: 26, fontWeight: 700, color: P.vc, lineHeight: 1.1, letterSpacing: '-1.5px', fontFamily: "'Space Mono', monospace" }}>
           {typeof val === 'number' ? count : val}
         </div>
         <div style={{ fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#A8A29E', marginTop: 4 }}>
@@ -143,7 +143,7 @@ function EntreeModal({ onClose, onSubmit }) {
               style={{ fontFamily: "'Space Mono', monospace", fontWeight: 700, letterSpacing: '0.05em' }}
               {...field('plaque')} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+          <div className="modal-grid-2">
             <div>
               <label className="sp-label">Type de véhicule</label>
               <select className="sp-input" {...field('type_vehicule')}>

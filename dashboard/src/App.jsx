@@ -5,12 +5,15 @@ import ListeVehicules    from './components/ListeVehicules.jsx'
 import AlertesPanel      from './components/AlertesPanel.jsx'
 import StatistiquesParking from './components/StatistiquesParking.jsx'
 import RegistreServices  from './components/RegistreServices.jsx'
+import ArchitecturePage  from './components/ArchitecturePage.jsx'
+import LandingPage       from './components/LandingPage.jsx'
+import LoginPage         from './components/LoginPage.jsx'
 import { places, transactions } from './services/api.js'
 import './App.css'
 
 let _tid = 0
 
-/* ── Toast ─────────────────────────────────────────────── */
+/* ── Toast ─────────────────────────────────────────────────── */
 function Toast({ toast }) {
   const s = {
     danger:  { bg: '#FEF2F2', bd: '#FECACA', c: '#991B1B', icon: '⚡' },
@@ -40,7 +43,7 @@ function ToastStack({ toasts }) {
   )
 }
 
-/* ── SVG Icons ───────────────────────────────────────────── */
+/* ── SVG Icons ───────────────────────────────────────────────── */
 function IconGrid({ size=16, color='currentColor' }) {
   return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
     <rect x="1" y="1" width="5.5" height="5.5" rx="1.5" stroke={color} strokeWidth="1.4"/>
@@ -80,18 +83,31 @@ function IconApi({ size=16, color='currentColor' }) {
     <path d="M9 5l-2 6" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
   </svg>
 }
+function IconArch({ size=16, color='currentColor' }) {
+  return <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <rect x="1.5" y="1.5" width="4" height="3" rx="1" stroke={color} strokeWidth="1.3"/>
+    <rect x="6" y="1.5" width="4" height="3" rx="1" stroke={color} strokeWidth="1.3"/>
+    <rect x="10.5" y="1.5" width="4" height="3" rx="1" stroke={color} strokeWidth="1.3"/>
+    <rect x="4" y="11.5" width="8" height="3" rx="1" stroke={color} strokeWidth="1.3"/>
+    <path d="M3.5 4.5v2h9v-2M8 6.5v5" stroke={color} strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+}
 
 const NAV = [
   { id: 'dashboard',    label: 'Dashboard',     icon: IconGrid,  group: 'main' },
   { id: 'parking',      label: 'Plan parking',  icon: IconPark,  group: 'main' },
   { id: 'vehicules',    label: 'Véhicules',     icon: IconCar,   group: 'main' },
   { id: 'alertes',      label: 'Alertes',       icon: IconBell,  group: 'main' },
-  { id: 'statistiques', label: 'Statistiques',  icon: IconChart, group: 'data' },
-  { id: 'registre',     label: 'Registre SOA',  icon: IconApi,   group: 'data' },
+  { id: 'statistiques',  label: 'Statistiques',  icon: IconChart, group: 'data' },
+  { id: 'registre',      label: 'Registre SOA',  icon: IconApi,   group: 'data' },
+  { id: 'architecture',  label: 'Architecture',  icon: IconArch,  group: 'data' },
 ]
 
-/* ── App ────────────────────────────────────────────────── */
-export default function App() {
+const ROLE_LABEL = { admin: 'Administrateur', agent: 'Agent parking', viewer: 'Visiteur' }
+const ROLE_COLOR = { admin: '#EA580C', agent: '#059669', viewer: '#0284C7' }
+
+/* ── Dashboard shell ────────────────────────────────────────── */
+function DashboardApp({ user, onLogout }) {
   const [tab, setTab]               = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [stats, setStats]           = useState(null)
@@ -173,27 +189,22 @@ export default function App() {
   const nbAlert  = alertes.length
   const encBadge = encours.length
   const taux     = parseFloat(stats?.taux_occupation ?? 0)
+  const roleColor = ROLE_COLOR[user.role] ?? '#EA580C'
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
 
       {sidebarOpen && (
         <div className="sidebar-overlay animate-fadein" onClick={() => setSidebarOpen(false)} />
       )}
 
-      {/* ── Sidebar ─────────────────────────────────────── */}
+      {/* ── Sidebar ──────────────────────────────────────── */}
       <aside className={`sidebar${sidebarOpen ? ' sidebar--open' : ''}`}>
 
         {/* Logo */}
         <div style={{ padding: '18px 14px 16px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{
-              width: 36, height: 36, borderRadius: 8, flexShrink: 0,
-              background: '#EA580C',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px',
-              boxShadow: '0 3px 10px rgba(234,88,12,0.4)',
-            }}>SP</div>
+            <div style={{ width: 36, height: 36, borderRadius: 8, flexShrink: 0, background: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, color: '#fff', letterSpacing: '-0.3px', boxShadow: '0 3px 10px rgba(234,88,12,0.4)' }}>SP</div>
             <div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.2px' }}>SmartParking</div>
               <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', fontWeight: 400, marginTop: 1 }}>SOA Platform · v2.0</div>
@@ -251,8 +262,31 @@ export default function App() {
           })}
         </nav>
 
-        {/* Bottom status */}
+        {/* Bottom: user + status */}
         <div style={{ padding: '12px 14px 16px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+
+          {/* User card */}
+          <div style={{ marginBottom: 14, padding: '10px 11px', borderRadius: 8, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, background: roleColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
+                {user.initials}
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.82)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.32)', marginTop: 1 }}>{ROLE_LABEL[user.role]}</div>
+              </div>
+            </div>
+            <button
+              onClick={onLogout}
+              style={{ width: '100%', padding: '6px', borderRadius: 6, background: 'rgba(220,38,38,0.1)', border: '1px solid rgba(220,38,38,0.2)', color: '#FCA5A5', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.13s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.2)'; e.currentTarget.style.borderColor = 'rgba(220,38,38,0.35)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(220,38,38,0.1)'; e.currentTarget.style.borderColor = 'rgba(220,38,38,0.2)' }}
+            >
+              ← Déconnexion
+            </button>
+          </div>
+
+          {/* Occupation bar */}
           <div style={{ marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <span style={{ fontSize: 9.5, fontWeight: 600, color: 'rgba(255,255,255,0.32)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Occupation</span>
@@ -262,12 +296,7 @@ export default function App() {
             </div>
             <div style={{ height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
               {stats && (
-                <div style={{
-                  height: '100%', borderRadius: 2,
-                  width: `${Math.min(taux, 100)}%`,
-                  background: taux >= 90 ? '#DC2626' : taux >= 75 ? '#D97706' : '#059669',
-                  transition: 'width 0.6s ease',
-                }} />
+                <div style={{ height: '100%', borderRadius: 2, width: `${Math.min(taux, 100)}%`, background: taux >= 90 ? '#DC2626' : taux >= 75 ? '#D97706' : '#059669', transition: 'width 0.6s ease' }} />
               )}
             </div>
           </div>
@@ -283,7 +312,7 @@ export default function App() {
         </div>
       </aside>
 
-      {/* ── Main ────────────────────────────────────────── */}
+      {/* ── Main ─────────────────────────────────────────── */}
       <div className="main-shell">
 
         {/* Header */}
@@ -320,6 +349,11 @@ export default function App() {
             <div style={{ fontSize: 11, color: 'var(--t4)', fontWeight: 500 }} className="hide-mobile">
               {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
             </div>
+            {/* User pill */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 10px', borderRadius: 20, background: 'var(--bg)', border: '1px solid var(--b0)' }} className="hide-mobile">
+              <div style={{ width: 20, height: 20, borderRadius: 5, background: roleColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 800, color: '#fff', flexShrink: 0 }}>{user.initials}</div>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--t2)' }}>{user.name}</span>
+            </div>
           </div>
         </header>
 
@@ -332,12 +366,45 @@ export default function App() {
           {tab === 'parking'     && <VueParkingGrille  places={allPlaces} zones={zones} />}
           {tab === 'vehicules'   && <ListeVehicules    encours={encours} onEntree={handleEntree} onSortie={handleSortie} />}
           {tab === 'alertes'     && <AlertesPanel      alertes={alertes} onResoudre={handleResoudre} />}
-          {tab === 'statistiques'&& <StatistiquesParking />}
-          {tab === 'registre'    && <RegistreServices />}
+          {tab === 'statistiques'  && <StatistiquesParking />}
+          {tab === 'registre'      && <RegistreServices />}
+          {tab === 'architecture'  && <ArchitecturePage />}
         </div>
       </div>
 
       <ToastStack toasts={toasts} />
     </div>
   )
+}
+
+/* ── Root router ────────────────────────────────────────────── */
+export default function App() {
+  const [page, setPage] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sp_auth')) ? 'app' : 'landing' } catch { return 'landing' }
+  })
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sp_auth')) } catch { return null }
+  })
+
+  const login = useCallback((u) => {
+    localStorage.setItem('sp_auth', JSON.stringify(u))
+    setUser(u)
+    setPage('app')
+  }, [])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('sp_auth')
+    localStorage.removeItem('sp_jwt')
+    setUser(null)
+    setPage('login')
+  }, [])
+
+  useEffect(() => {
+    window.addEventListener('sp:unauthorized', logout)
+    return () => window.removeEventListener('sp:unauthorized', logout)
+  }, [logout])
+
+  if (page === 'landing') return <LandingPage onConnect={() => setPage('login')} />
+  if (page === 'login')   return <LoginPage onLogin={login} onBack={() => setPage('landing')} />
+  return <DashboardApp user={user} onLogout={logout} />
 }

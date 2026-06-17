@@ -32,52 +32,54 @@ export default function AlertesPanel({ alertes, onResoudre }) {
           return (
             <div
               key={a.id}
+              className="alert-item"
               style={{
-                display: 'flex', alignItems: 'center', gap: 14,
                 padding: '14px 18px', borderRadius: 12,
                 background: crit ? '#fff5f6' : '#fffbeb',
                 border: `1px solid ${crit ? '#fecdd3' : '#fde68a'}`,
                 transition: 'background 0.15s',
               }}
             >
-              <div style={{
-                width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                background: crit ? '#e11d48' : '#d97706',
-                boxShadow: `0 0 8px ${crit ? 'rgba(225,29,72,0.4)' : 'rgba(217,119,6,0.4)'}`,
-              }} />
-
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
-                  {a.message}
-                </p>
-                <p style={{ margin: '3px 0 0', fontSize: 11, color: '#94a3b8' }}>
-                  Zone {a.zone_code} — {new Date(a.cree_le).toLocaleString('fr-FR')}
-                </p>
+              <div className="alert-item-body">
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
+                  background: crit ? '#e11d48' : '#d97706',
+                  boxShadow: `0 0 8px ${crit ? 'rgba(225,29,72,0.4)' : 'rgba(217,119,6,0.4)'}`,
+                }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.4 }}>
+                    {a.message}
+                  </p>
+                  <p style={{ margin: '3px 0 0', fontSize: 11, color: '#94a3b8' }}>
+                    Zone {a.zone_code} — {new Date(a.cree_le).toLocaleString('fr-FR')}
+                  </p>
+                </div>
               </div>
 
-              <span style={{
-                fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
-                padding: '3px 9px', borderRadius: 20, flexShrink: 0,
-                background: crit ? 'rgba(225,29,72,0.1)' : 'rgba(217,119,6,0.1)',
-                color: crit ? '#e11d48' : '#b45309',
-                border: `1px solid ${crit ? '#fecdd3' : '#fde68a'}`,
-              }}>
-                {a.severite.toUpperCase()}
-              </span>
-
-              <button
-                onClick={() => onResoudre(a.id)}
-                style={{
-                  background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)',
-                  color: '#059669', fontSize: 12, fontWeight: 600,
-                  padding: '6px 14px', borderRadius: 8, cursor: 'pointer', flexShrink: 0,
-                  transition: 'all 0.15s',
-                }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(5,150,105,0.15)'; e.currentTarget.style.borderColor = 'rgba(5,150,105,0.35)' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'rgba(5,150,105,0.08)'; e.currentTarget.style.borderColor = 'rgba(5,150,105,0.2)' }}
-              >
-                Résoudre
-              </button>
+              <div className="alert-item-actions">
+                <span style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.06em',
+                  padding: '3px 9px', borderRadius: 20,
+                  background: crit ? 'rgba(225,29,72,0.1)' : 'rgba(217,119,6,0.1)',
+                  color: crit ? '#e11d48' : '#b45309',
+                  border: `1px solid ${crit ? '#fecdd3' : '#fde68a'}`,
+                }}>
+                  {a.severite.toUpperCase()}
+                </span>
+                <button
+                  onClick={() => onResoudre(a.id)}
+                  style={{
+                    background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(5,150,105,0.2)',
+                    color: '#059669', fontSize: 12, fontWeight: 600,
+                    padding: '6px 14px', borderRadius: 8, cursor: 'pointer',
+                    transition: 'all 0.15s', whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(5,150,105,0.15)'; e.currentTarget.style.borderColor = 'rgba(5,150,105,0.35)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(5,150,105,0.08)'; e.currentTarget.style.borderColor = 'rgba(5,150,105,0.2)' }}
+                >
+                  Résoudre
+                </button>
+              </div>
             </div>
           )
         })}

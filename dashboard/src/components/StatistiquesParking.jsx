@@ -161,7 +161,7 @@ export default function StatistiquesParking() {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Statistiques</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <div style={{
             display: 'flex', gap: 2,
             background: '#f1f5f9', border: '1px solid #e2e8f0',

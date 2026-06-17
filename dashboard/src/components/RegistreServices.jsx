@@ -62,7 +62,10 @@ export default function RegistreServices() {
     return () => clearInterval(id)
   }, [])
 
-  const services = data?.registry?.services ?? []
+  const services    = data?.registry?.services    ?? []
+  const consumers   = data?.registry?.consommateurs ?? {}
+  const authEp      = data?.registry?.auth_endpoint ?? '/api/auth/login'
+  const security    = data?.registry?.security ?? 'JWT HS256'
 
   return (
     <div>
@@ -250,16 +253,17 @@ export default function RegistreServices() {
               padding: '12px 18px',
               background: '#f8fafc', borderBottom: '1px solid #e2e8f0',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              flexWrap: 'wrap', gap: 8,
             }}>
-              <div>
+              <div style={{ minWidth: 0, flex: 1 }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>
                   Documentation — {svc.nom}
                 </span>
-                <span style={{ marginLeft: 10, fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>
+                <span style={{ marginLeft: 10, fontSize: 11, color: '#94a3b8', fontFamily: 'monospace', display: 'inline-block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
                   http://localhost:8090/api/{svc.id}/docs
                 </span>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                 <a
                   href={`http://localhost:8090/api/${svc.id}/docs`}
                   target="_blank" rel="noreferrer"
@@ -287,6 +291,70 @@ export default function RegistreServices() {
           </div>
         )
       })()}
+
+      {/* Sécurité & consommateurs */}
+      {(Object.keys(consumers).length > 0 || authEp) && (
+        <div style={{ marginBottom: 20, display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+          {/* Auth info */}
+          <div style={{ flex: '1 1 260px', background: '#fff', borderRadius: 12, border: '1px solid #E2DDD3', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px', background: 'linear-gradient(135deg,#0D0905,#1C0A00)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14 }}>🔐</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>Sécurité JWT</span>
+            </div>
+            <div style={{ padding: '12px 14px' }}>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A8A29E', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Endpoint d'authentification</div>
+                <code style={{ fontSize: 11, fontFamily: 'monospace', color: '#059669', background: '#ECFDF5', padding: '3px 7px', borderRadius: 5, border: '1px solid #6EE7B7' }}>POST {authEp}</code>
+              </div>
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A8A29E', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>Algorithme</div>
+                <code style={{ fontSize: 11, fontFamily: 'monospace', color: '#4338CA' }}>{security}</code>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, fontWeight: 700, color: '#A8A29E', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>En-tête requis</div>
+                <code style={{ fontSize: 10, fontFamily: 'monospace', color: '#78716C', background: '#F3F1EC', padding: '3px 7px', borderRadius: 5 }}>Authorization: Bearer &lt;token&gt;</code>
+              </div>
+            </div>
+          </div>
+
+          {/* Consommateurs */}
+          <div style={{ flex: '2 1 320px', background: '#fff', borderRadius: 12, border: '1px solid #E2DDD3', overflow: 'hidden' }}>
+            <div style={{ padding: '10px 14px', background: '#FAF8F3', borderBottom: '1px solid #E2DDD3', fontSize: 12, fontWeight: 700, color: '#1C1917', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>👥</span> Consommateurs enregistrés
+            </div>
+            <div style={{ padding: '10px 14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 8 }}>
+                {Object.entries(consumers).map(([key, c]) => {
+                  const colors = { admin:'#EA580C', agent:'#059669', viewer:'#0284C7', simul:'#D97706' }
+                  const col = colors[key] ?? '#78716C'
+                  return (
+                    <div key={key} style={{ padding: '10px 12px', borderRadius: 9, border: `1px solid ${col}25`, background: `${col}08` }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 7 }}>
+                        <div style={{ width: 26, height: 26, borderRadius: 7, background: col, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#fff' }}>
+                          {key.slice(0,2).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 11, fontWeight: 700, color: '#1C1917' }}>{key}</div>
+                          <div style={{ fontSize: 9, color: '#A8A29E' }}>{c.nom}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {(c.permissions ?? []).map(p => (
+                          <span key={p} style={{ fontSize: 8, fontWeight: 700, padding: '2px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.05em',
+                            background: p === 'write' ? '#FFF7ED' : p === 'admin' ? '#FEF2F2' : '#F0F9FF',
+                            color:      p === 'write' ? '#EA580C' : p === 'admin' ? '#DC2626' : '#0284C7',
+                            border:     `1px solid ${p === 'write' ? '#FDBA74' : p === 'admin' ? '#FECACA' : '#BAE6FD'}`,
+                          }}>{p}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* JSON viewer */}
       {data?.registry && (

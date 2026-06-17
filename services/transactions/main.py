@@ -10,8 +10,11 @@ import psycopg2
 import psycopg2.extras
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+from auth_middleware import jwt_middleware
 
 PLACES_URL = os.getenv("PLACES_URL", "http://places:8001")
 
@@ -95,7 +98,8 @@ POST /sortie
     license_info={"name": "Projet Examen SOA — UADB SATIC"},
 )
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*", "Authorization"])
+app.add_middleware(BaseHTTPMiddleware, dispatch=jwt_middleware)
 
 
 @app.exception_handler(HTTPException)

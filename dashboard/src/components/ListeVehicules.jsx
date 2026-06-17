@@ -133,7 +133,7 @@ function EntreeModal({ onClose, onSubmit }) {
               style={{ fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.05em' }}
               {...field('plaque')} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
+          <div className="modal-grid-2">
             <div>
               <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#64748b', marginBottom: 7, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Type</label>
               <select className="sp-input" {...field('type_vehicule')}>
@@ -209,7 +209,7 @@ export default function ListeVehicules({ encours, onEntree, onSortie }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#0f172a' }}>Véhicules garés</h2>
         <span style={{
           background: '#eef2ff', border: '1px solid #c7d2fe',

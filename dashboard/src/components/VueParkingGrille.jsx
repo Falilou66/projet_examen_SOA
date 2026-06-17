@@ -15,19 +15,15 @@ function PlaceCell({ place, onClick }) {
   const hs  = place.statut === 'hors_service'
   const tb  = TYPE_BADGE[place.type]
 
-  const style = {
-    width: 68, height: 68, borderRadius: 10, border: '1px solid',
-    borderColor: occ ? '#fca5a5' : hs ? '#e2e8f0' : '#a7f3d0',
-    background:  occ ? '#fff5f5' : hs ? '#f8fafc' : '#f0fdf9',
-    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-    gap: 2, cursor: occ ? 'pointer' : hs ? 'not-allowed' : 'default',
-    transition: 'all 0.14s ease', position: 'relative',
-    opacity: hs ? 0.45 : 1,
-  }
-
   return (
     <button
-      style={style}
+      className="parking-cell"
+      style={{
+        borderColor: occ ? '#fca5a5' : hs ? '#e2e8f0' : '#a7f3d0',
+        background:  occ ? '#fff5f5' : hs ? '#f8fafc' : '#f0fdf9',
+        cursor: occ ? 'pointer' : hs ? 'not-allowed' : 'default',
+        opacity: hs ? 0.45 : 1,
+      }}
       onClick={() => occ && onClick(place)}
       onMouseEnter={e => {
         if (hs) return
@@ -52,7 +48,7 @@ function PlaceCell({ place, onClick }) {
         </span>
       )}
       {occ && (
-        <span style={{ fontSize: 8, fontFamily: 'monospace', color: '#ef4444', maxWidth: 62, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <span style={{ fontSize: 8, fontFamily: 'monospace', color: '#ef4444', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {place.plaque}
         </span>
       )}

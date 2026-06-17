@@ -30,6 +30,23 @@ services:
       timeout: 5s
       retries: 5
 
+  # ── Service Auth (port 8000) ──────────────────────────────
+  auth:
+    build: ./auth
+    container_name: sc-auth
+    environment:
+      JWT_SECRET:  smartparking-soa-2026-secret
+      TOKEN_HOURS: 8
+    networks:
+      - smartparking-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
   # ── Service Places (port 8001) ─────────────────────────────
   places:
     build: ./services/places
@@ -41,6 +58,7 @@ services:
       DB_USER:     svc_places
       DB_PASSWORD: places_pass
       DB_SCHEMA:   places
+      JWT_SECRET:  smartparking-soa-2026-secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,6 +84,7 @@ services:
       DB_PASSWORD: trans_pass
       DB_SCHEMA:   transactions
       PLACES_URL:  http://places:8001
+      JWT_SECRET:  smartparking-soa-2026-secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -94,6 +113,7 @@ services:
       DB_SCHEMA:        reporting
       PLACES_URL:       http://places:8001
       TRANSACTIONS_URL: http://transactions:8002
+      JWT_SECRET:       smartparking-soa-2026-secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,7 +131,7 @@ services:
       retries: 5
       start_period: 15s
 
-  # ── API Gateway (Nginx — port 8080) ────────────────────────
+  # ── API Gateway (Nginx — port 8090) ────────────────────────
   gateway:
     image: nginx:alpine
     container_name: sc-gateway
@@ -120,6 +140,8 @@ services:
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
+      auth:
+        condition: service_healthy
       places:
         condition: service_healthy
       transactions:
@@ -136,6 +158,9 @@ services:
     container_name: sc-simulateur
     environment:
       GATEWAY_URL:      http://gateway:80
+      AUTH_URL:         http://auth:8000
+      PLACES_URL:       http://places:8001
+      TRANSACTIONS_URL: http://transactions:8002
       INTERVAL_SECONDS: 5
     depends_on:
       - gateway
@@ -143,7 +168,7 @@ services:
       - smartparking-net
     restart: unless-stopped
 
-  # ── Dashboard React (port 3000) ────────────────────────────
+  # ── Dashboard React (port 3001) ────────────────────────────
   dashboard:
     build: ./dashboard
     container_name: sc-dashboard
